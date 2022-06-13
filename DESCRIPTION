@@ -1,0 +1,27 @@
+Package: CoQR
+Title: Joint Dynamic Models for the VaR and CoVaR
+Version: 0.0.0.9000
+Date: 2022-06-09
+Authors@R: 
+    c(person("Timo", "Dimitriadis", , "timo.dimi@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-8322-360X")),
+    person("Yannick", "Hoga", , "Yannick.Hoga@vwl.uni-due.de", role = c("aut")))
+Description: The package estimates joint dynamic autoregressive or cross-sectional models of the VaR (Value-at-Risk) (i.e., the quantile) and the CoVaR of a bivariate vector of financial returns.
+License: GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Imports: 
+    stats,
+    dplyr,
+    MASS,
+    tibble,
+    ggplot2,
+    mvtnorm,
+    lubridate,
+    reshape2,
+    rugarch,
+    tidyselect,
+    ggnewscale,
+    mixtools,
+    sandwich

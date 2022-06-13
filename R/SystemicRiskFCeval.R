@@ -1,0 +1,246 @@
+
+
+#' Title
+#'
+#' @param x
+#' @param y
+#' @param VaR1
+#' @param VaR2
+#' @param CoVaR1
+#' @param CoVaR2
+#' @param MES1
+#' @param MES2
+#' @param data
+#' @param SRM
+#' @param beta
+#' @param alpha
+#' @param sided
+#' @param cov_method
+#' @param sig_level
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' @importFrom magrittr `%>%`
+SystemicRiskFCeval <- function(x=NULL, y=NULL,
+                               VaR1=NULL, VaR2=NULL,
+                               CoVaR1=NULL, CoVaR2=NULL,
+                               MES1=NULL, MES2=NULL,
+                               data=NULL,
+                               SRM=NULL, beta=0.95, alpha=0.95,
+                               sided="onehalf", cov_method="HAC", sig_level=0.05){
+
+  if (is.null(data)){
+    if (is.null(CoVaR1)){
+      SRM <- "MES"
+      data <- tibble::tibble(x=x, y=y, VaR1=VaR1, VaR2=VaR2, SRM1=MES1, SRM2=MES2)
+    } else {
+      SRM <- "CoVaR"
+      data <- tibble::tibble(x=x, y=y, VaR1=VaR1, VaR2=VaR2, SRM1=CoVaR1, SRM2=CoVaR2)
+    }
+  }
+  data <- data %>% stats::na.omit()
+
+  LossDiffVaR <- with(data, loss_VaR(x=x, VaR=VaR1, beta=beta)) - with(data, loss_VaR(x=x, VaR=VaR2, beta=beta))
+  LossDiffSRM <- switch(SRM,
+                        MES = {with(data, loss_MES(x=x, y=y, VaR=VaR1, MES=SRM1)) - with(data, loss_MES(x=x, y=y, VaR=VaR2, MES=SRM2))},
+                        CoVaR = {with(data, loss_CoVaR(x=x, y=y, VaR=VaR1, CoVaR=SRM1, alpha=alpha)) - with(data, loss_CoVaR(x=x, y=y, VaR=VaR2, CoVaR=SRM2, alpha=alpha))}
+  )
+  LossDiff <- cbind(LossDiffVaR, LossDiffSRM)
+  MeanLossDiff <- colMeans(LossDiff, na.rm = T)
+
+  # Wald type tests
+  n <- dim(data)[1]
+
+  # HAC or iid covariance estimator
+  if (cov_method=="HAC"){
+    Omega <- n * sandwich::vcovHAC(lm(LossDiff~1))
+  } else {
+    Omega <- cov(LossDiff)
+  }
+  Omega_inv = tryCatch(solve(Omega), error = function(e) {MASS::ginv(Omega)})
+
+  if (sided=="onehalf"){
+    b          <- Omega_inv[1, 2] * n
+    c          <- Omega_inv[2, 2] * n
+    d_1n       <- mean(LossDiff[,1])
+    d_2n       <- mean(LossDiff[,2])
+    d_2n_tilde <- max(d_2n, -(b/c) * d_1n)
+
+    TestStat <- n * (t(c(d_1n, d_2n_tilde))) %*% Omega_inv %*% t((t(c(d_1n, d_2n_tilde))))     # Wald test statistic
+    pval <- 0.5 + 0.5 * pchisq(q=TestStat, df=2, lower.tail = FALSE) - 0.5*pchisq(q=TestStat, df=1)    # p-value of onehalf sided test
+  } else {
+    TestStat <- n * (t(colMeans(LossDiff))) %*% Omega_inv %*% t((t(colMeans(LossDiff))))  # Wald test statistic
+    pval <- pchisq(TestStat, df=2, lower.tail=FALSE)                    # p-value
+  }
+
+
+  # Contour data for the ellipse plot
+  # ToDo: This only applies to the ONEHALF-sided test!!!!!
+  # Calculate and plot something different for the TWO-sided test
+  new_sig <- function(x, sig_level){
+    ret <- sig_level - 0.5 * (1 + x - pchisq(qchisq(1-x, df=2) , df=1))
+  }
+  nu_tilde = stats::uniroot(new_sig, interval = c(0,1), sig_level=sig_level)$root   # calculate "new" significance level
+
+  npoints <- 1000
+  # Get points for a central ellipse of acceptance region
+  contour_data <- mixtools::ellipse(mu=c(0,0),
+                                    sigma = Omega/dim(data)[1],
+                                    alpha = nu_tilde,
+                                    npoints=npoints,
+                                    draw=FALSE) %>%
+    as.data.frame()
+  colnames(contour_data) <- c("x","y")
+  ellipse_data <- bind_rows(tail(contour_data, -which.min(contour_data$x)),
+                            head(contour_data, which.min(contour_data$x))) %>%
+    dplyr::mutate(is_upper = (row_number() > dim(.)[1]/2))
+
+
+  # Calculate the zone!
+  if (pval > sig_level) {zone <- "yellow"}
+  else if (MeanLossDiff[1] < min(ellipse_data$x)) {zone <- "red"}
+  else if (MeanLossDiff[1] > max(ellipse_data$x)) {zone <- "grey"}
+  else if (MeanLossDiff[2] >= 0) {zone <- "green"}
+  else {zone <- "orange"}
+
+
+  obj <- list(MeanLossDiff=MeanLossDiff,
+              LossDiffs=LossDiff,
+              TestStat=TestStat,
+              pval=pval,
+              zone=zone,
+              data=data,
+              ellipse_data=ellipse_data,
+              sig_level=sig_level,
+              Omega=Omega,
+              sided=sided,
+              SRM=SRM,
+              beta=beta,
+              alpha=alpha
+              )
+  class(obj) <- "SystemicRiskFCeval"
+  return(obj)
+}
+
+
+
+
+#' Title
+#'
+#' @param obj
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
+plot.SystemicRiskFCeval <- function(obj, ...){
+  p <- autoplot(obj, ...)
+  print(p)
+}
+
+
+
+
+#' Title
+#'
+#' @param obj
+#'
+#' @return
+#' @export
+#'
+#' @examples
+autoplot.SystemicRiskFCeval <- function(obj){
+  x_lim <- 1.25 * max(abs(obj$ellipse_data$x), abs(obj$MeanLossDiff[1]))
+  y_lim <- 1.25 * max(abs(obj$ellipse_data$y), abs(obj$MeanLossDiff[2]))
+
+  p <- ggplot2::ggplot(obj$ellipse_data, aes(x,y)) +
+    ggplot2::geom_rect(ggplot2::aes(xmin=-Inf, xmax=min(x), ymin=-Inf, ymax=Inf), fill="red") +
+    ggplot2::geom_rect(ggplot2::aes(xmin=max(x), xmax=Inf, ymin=-Inf, ymax=Inf), fill="grey") +
+    ggplot2::geom_ribbon(data=obj$ellipse_data,
+                         ggplot2::aes(x=x, ymin=min(y), ymax=max(y)), fill="yellow") +  # This can be done better!
+    ggplot2::geom_ribbon(data=obj$ellipse_data %>% dplyr::filter(is_upper==FALSE),
+                         ggplot2::aes(x=x, ymin=-Inf, ymax=y), fill="orange") +
+    ggplot2::geom_ribbon(data=obj$ellipse_data  %>% dplyr::filter(is_upper==TRUE),
+                         ggplot2::aes(x=x, ymin=y, ymax=Inf), fill="green") +
+    ggplot2::geom_path(color="grey20") +
+    ggplot2::geom_vline(xintercept=0, color="black", linetype="dotted") +
+    ggplot2::geom_hline(yintercept=0, color="black", linetype="dotted") +
+    ggplot2::geom_vline(aes(xintercept=min(x)), color="grey20") +
+    ggplot2::geom_vline(aes(xintercept=max(x)), color="grey20") +
+    ggplot2::geom_point(aes(x=obj$MeanLossDiff[1], y=obj$MeanLossDiff[2]), shape=4, color="black", size=3) +
+    ggplot2::theme_bw() +
+    # theme(panel.ontop = TRUE, panel.background = element_rect(color = NA, fill = NA)) +
+    ggplot2::scale_x_continuous(limits = c(-x_lim,x_lim)) +
+    ggplot2::scale_y_continuous(limits = c(-y_lim,y_lim))
+
+  p
+}
+
+
+
+
+
+#' Title
+#'
+#' @param obj
+#' @param digits
+#'
+#' @return
+#' @export
+#'
+#' @examples
+print.SystemicRiskFCeval <- function(obj, digits=4){
+  cat("Mean loss difference:\n")
+  print(format(obj$MeanLossDiff, digits = digits), quote = FALSE)
+  cat("Loss difference covariance:\n")
+  print(format(obj$Omega, digits = digits), quote = FALSE)
+}
+
+
+
+# Inputs:
+# x     = verifying observations
+# VaR   = VaR forecasts
+# beta  = risk level
+# b     = degree of homogeneity (b>=0)
+loss_VaR <- function(x, VaR, beta, b=1){
+  if(b==0){   # requires positive VaR forecasts (here h(x)=log(x))
+    S <- ( 1*(x <= VaR) - beta ) * log( pmax.int(VaR, 1e-10) ) +  1*(x > VaR) * log( pmax.int(x, 1e-10) )
+  }
+  else{       # h(x) = sign(x) * x^b
+    S <- ( 1*(x <= VaR) - beta ) * ( sign(VaR) * abs(VaR)^b - sign(x) * abs(x)^b )
+  }
+  return(S)
+}
+
+
+
+# Inputs:
+# (x,y) = verifying observations
+# VaR   = VaR forecasts
+# CoVaR = CoVaR forecasts
+# alpha = risk level
+# b     = degree of homogeneity (b>=0)
+loss_CoVaR <- function(x, y, VaR, CoVaR, alpha, b=1){
+  if(b==0){  # requires positive CoVaR forecasts (here g(x)=log(x))
+    S <- 1*(x>VaR) * ( ( 1*(y <= CoVaR) - alpha ) * log( pmax.int(CoVaR, 1e-10) ) +  1*(y > CoVaR) * log( pmax.int(y, 1e-10) ) )
+  }
+  else{      # g(x) = sign(x) * x^b
+    S <- 1*(x>VaR) * ( ( 1*(y <= CoVaR) - alpha ) * ( sign(CoVaR) * abs(CoVaR)^b - sign(y) * abs(y)^b) )
+  }
+  return(S)
+}
+
+
+
+# Inputs:
+# (x,y) = verifying observations
+# VaR   = VaR forecasts
+# MES   = MES forecasts
+loss_MES <- function(x, y, VaR, MES){
+  S <- 1*(x>VaR) * (MES - y)^2
+  return(S)
+}

@@ -1,0 +1,82 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# CoQR
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The CoQR package fits a dynamic Co-Quantile Regression in the sense that it semiparametrically models the Value at Risk (VaR), i.e., the $\beta$-quantile of $X_t$ jointly with the $\alpha|\beta$-CoVaR of a series $Y_t$ given $X_t$.
+
+## Installation
+
+You can install the development version of CoQR from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("TimoDimi/CoQR")
+```
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+```{r example}
+library(quantmod)
+library(dplyr)
+library(CoQR)
+
+
+# Get data from Yahoo Finance
+data_Symbols <- lapply(c("JPM", "^GSPC"), function(x) {
+  getSymbols(x,
+             from = "2000/01/01",
+             to = "2022/05/25",
+             periodicity = "daily",
+             auto.assign = FALSE) %>%
+    data.frame(Date=index(.), check.names=FALSE) %>%
+    tibble::as_tibble() %>%
+    rename_all(~stringr::str_replace_all(., paste0(x,"."), ""))
+})
+names(data_Symbols) <- c("JPM", "SP500")
+
+data_Assets <- bind_rows(data_Symbols, .id = "Asset") %>%
+  dplyr::group_by(Asset) %>%
+  dplyr::mutate(Date=lubridate::as_date(Date),
+         NegReturn= -100*(log(Close) - log(lag(Close)))) %>%
+  dplyr::select(Date, Asset, NegReturn) %>%
+  na.omit()
+
+# Fit a CoCAViaR model
+CoCAViaR_obj <- CoQR(x=data_Assets %>% filter(Asset=="JPM") %>% pull(NegReturn),
+                     y=data_Assets %>% filter(Asset=="SP500") %>% pull(NegReturn),
+                     z=NULL, 
+                     model="CoCAViaR_SAV_fullA", 
+                     SRM="CoVaR", 
+                     beta=0.95, 
+                     alpha=0.95)
+
+# Get standard errors and print its summary
+summary(CoCAViaR_obj)
+
+# Plot
+plot(CoCAViaR_obj)
+
+## basic example code
+```
+
+
+You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this. You could also use GitHub Actions to re-render `README.Rmd` every time you push. An example workflow can be found here: <https://github.com/r-lib/actions/tree/v1/examples>.
+
