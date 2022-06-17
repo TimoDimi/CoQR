@@ -2,16 +2,20 @@
 % Please edit documentation in R/CoQR.R
 \name{summary.CoQR}
 \alias{summary.CoQR}
-\title{Title}
+\title{CoQR summary method}
 \usage{
 \method{summary}{CoQR}(CoQR_object, method = "asymptotic", ...)
 }
 \arguments{
-\item{...}{}
+\item{CoQR_object}{A CoQR object}
+
+\item{method}{The method to compute the standard errors. Either "asymptotic" or "boot"}
+
+\item{...}{Further input parameters}
 }
 \value{
-
+A summary.CoQR object
 }
 \description{
-Title
+CoQR summary method
 }

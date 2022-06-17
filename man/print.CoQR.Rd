@@ -2,16 +2,15 @@
 % Please edit documentation in R/CoQR.R
 \name{print.CoQR}
 \alias{print.CoQR}
-\title{Title}
+\title{print method for the CoQR class}
 \usage{
 \method{print}{CoQR}(obj, digits = 4)
 }
 \arguments{
-\item{digits}{}
-}
-\value{
+\item{obj}{CoQR object}
 
+\item{digits}{printed digits after the comma}
 }
 \description{
-Title
+print method for the CoQR class
 }

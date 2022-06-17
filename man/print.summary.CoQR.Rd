@@ -2,16 +2,16 @@
 % Please edit documentation in R/CoQR.R
 \name{print.summary.CoQR}
 \alias{print.summary.CoQR}
-\title{Title}
+\title{print method for the sum.CoQR object}
 \usage{
 \method{print}{summary.CoQR}(sum.CoQR_object)
 }
 \arguments{
-\item{sum.CoQR_object}{}
+\item{sum.CoQR_object}{A sum.CoQR object}
 }
 \value{
-
+Nothing
 }
 \description{
-Title
+print method for the sum.CoQR object
 }

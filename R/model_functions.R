@@ -82,7 +82,7 @@ model_joint_linear <- function(theta, df, prob_level, SRM, forecast=FALSE, model
 
   # TT <- dim(df)[1]
   # if (forecast){TT <- TT + 1} # To produce a model forecast, simply add 1 to TT
-  z <- df %>% dplyr::select(-c("Date_index", "Date", "x", "y")) %>% as.matrix()
+  z <- df %>% dplyr::select(-c("Date", "x", "y")) %>% as.matrix()
 
   q <- length(theta)
   if (model_type=="joint"){
@@ -108,10 +108,8 @@ model_joint_linear <- function(theta, df, prob_level, SRM, forecast=FALSE, model
 #' @param SRM Systemic risk measure, currently only "CoVaR"
 #'
 #' @return list of model gradients
-#'
-#' @NoRd
 nabla_joint_linear <- function(theta, df, prob_level, SRM){
-  z <- df %>% dplyr::select(-c("Date_index", "Date", "x", "y")) %>% as.matrix()
+  z <- df %>% dplyr::select(-c("Date", "x", "y")) %>% as.matrix()
 
   nabla_m1 <- cbind(z, array(0,dim=dim(z)))
   nabla_m2 <- cbind(array(0,dim=dim(z)), z)
@@ -124,7 +122,7 @@ nabla_joint_linear <- function(theta, df, prob_level, SRM){
 theta_joint_linear <- function(theta, df){
   # We get a result for q when either theta or df are specified
   if (!is.null(df)){
-    q <- 2 * df %>% dplyr::select(-c("Date_index", "Date", "x", "y")) %>% dim() %>% .[2] # This is not perfect!!!
+    q <- 2 * df %>% dplyr::select(-c("Date", "x", "y")) %>% dim() %>% .[2] # This is not perfect!!!
   } else {
     q <- length(theta)/2
   }

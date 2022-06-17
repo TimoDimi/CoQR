@@ -7,10 +7,7 @@
 #' \deqn{VaR_\beta(X_t | Z_t) = v_t(\theta^v)
 #' \deqn{CoVaR_\alpha(Y_t | Z_t) = c_t(\theta^c)
 #'
-#' @param data data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index
-#' @param x Response vector for the VaR
-#' @param y Response vector for the CoVaR
-#' @param z Explanatory variables for the model equations
+#' @param data A tsibble that holds the variables x, y, possibly covariates and an index columns with the name Date
 #' @param model Specify the model type; see \link{model_fun} for details
 #' @param SRM The systemic risk measure under consideration; currently only the "CoVaR" is implemented
 #' @param beta Probability level for the VaR
@@ -44,11 +41,20 @@
 #'
 #' # (2) Simulate bivariate GARCH data
 #' library(rmgarch)
+#' library(dplyr)
 #' data(dji30retw)
 #'
 #' # Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
-#' obj <- CoQR(x=-100*as.numeric(dji30retw$JPM),
-#'            y=-100*rowMeans(dji30retw),
+#'
+#' data <- dji30retw %>%
+#' tibble::rownames_to_column("Date") %>%
+#'   mutate(Date=lubridate::as_date(Date)) %>%
+#'   select(Date, JPM, BAC) %>%
+#'   as_tsibble(index=Date) %>%
+#'   rename(x=JPM, y=BAC)
+
+
+#' obj <- CoQR(data=data,
 #'            model="CoCAViaR_SAV_diag")
 #'
 #' # Covariance estimation and display the parameter estimates with standard errors
@@ -66,11 +72,11 @@ CoQR <- function(...) {
 
 #' @rdname CoQR
 #' @export
-CoQR.default <- function(data=NULL, x=NULL, y=NULL, z=NULL,
+CoQR.default <- function(data=NULL,
                          model="CoCAViaR_SAV_diag", SRM="CoVaR", beta=0.95, alpha=0.95,
                          theta0=NULL, optim_replications=c(1,3)){
 
-  fit <- CoQR.fit(data=data, x=x, y=y, z=z,
+  fit <- CoQR.fit(data=data,
                   model=model, SRM=SRM, beta=beta, alpha=alpha,
                   theta0=theta0, optim_replications=optim_replications)
 
@@ -83,32 +89,15 @@ CoQR.default <- function(data=NULL, x=NULL, y=NULL, z=NULL,
 
 #' @rdname CoQR
 #' @export
-CoQR.fit <- function(data, x, y, z,
+CoQR.fit <- function(data,
                      model, SRM, beta, alpha,
                      theta0, optim_replications){
 
-  # ToDo: Get rid of the Date_index!!!
-
-
   # Collect input data as a tibble
-  data <- collect_data(data=data, x=x, y=y, z=z)
+  # data <- collect_data(data=data, x=x, y=y, z=z)
 
-  # ToDo: Use as.matrix somewhere!
-  # if (is.null(data)){
-  #   if ( !is.null(x) & !is.null(y) ){
-  #     data <- collect_data(x,y,z) %>%
-  #       mutate(Date_index=1:n(), Date=lubridate::as_date(Date_index))
-  #   } else error("Specify either a data frame or numerical vectors x and y.")
-  # } else {
-  #   data <- data %>%
-  #     dplyr::select(x,y, contains("z"), contains("Date"), contains("Date_index")) %>%
-  #     tibble::as_tibble()
-  #
-  #   # Treat empty Date_index and Date columns
-  #   if(!("Date_index" %in% colnames(data))) {data <- data %>% tibble::add_column(Date_index=1:nrow(data))}
-  #   if(!("Date" %in% colnames(data))) {data <- data %>% dplyr::mutate(Date=lubridate::as_date(Date_index))}
-  # }
-  #########################################################
+  # Check inputs:
+  if (!is_tsibble(data)) stop("Error: Please enter a 'tsibble' object for the argument 'data'.")
 
 
   models_implemented <- c("joint_linear",
@@ -194,13 +183,12 @@ CoQR.fit <- function(data, x, y, z,
   m_est  <- model_fun(theta_est, data, prob_level, model, SRM)
   data <- data %>%
     dplyr::mutate(VaR=as.numeric(m_est$m1), !!SRM:=as.numeric(m_est$m2)) %>%
-    dplyr::select(Date_index, Date, x, y, tidyselect::everything(), VaR, CoVaR) %>%
-    tibble::as_tibble()
+    dplyr::select(Date, x, y, tidyselect::everything(), VaR, CoVaR)
 
   # create a variable with colnames
   if (model == "joint_linear"){
     colnames_help <- data %>%
-      dplyr::select(-c(Date_index, Date, x, y, VaR, CoVaR)) %>%
+      dplyr::select(-c(Date, x, y, VaR, CoVaR)) %>%
       colnames()
     colnames <- list(VaR=colnames_help, CoVaR=colnames_help)
   } else {
@@ -223,16 +211,14 @@ CoQR.fit <- function(data, x, y, z,
 }
 
 
-#' Title
+#' CoQR summary method
 #'
-#' @param CoQR_object
-#' @param method
-#' @param ...
+#' @param CoQR_object A CoQR object
+#' @param method The method to compute the standard errors. Either "asymptotic" or "boot"
+#' @param ... Further input parameters
 #'
-#' @return
+#' @return A summary.CoQR object
 #' @export
-#'
-#' @examples
 summary.CoQR <- function(CoQR_object, method='asymptotic',...){
   cov <- cov.CoQR(CoQR_object, method,...)
   se <- sqrt(diag(cov))
@@ -261,16 +247,14 @@ summary.CoQR <- function(CoQR_object, method='asymptotic',...){
 }
 
 
-#' Title
+#' CoQR p arameter covariance estimation
 #'
-#' @param CoQR_object
-#' @param method
-#' @param ...
+#' @param CoQR_object A CoQR object
+#' @param method The method to compute the standard errors. Either "asymptotic" or "boot"
+#' @param ... Further input parameters
 #'
-#' @return
+#' @return covariance matrix
 #' @export
-#'
-#' @examples
 cov.CoQR <- function(CoQR_object, method, ...) {
   if (method == 'asymptotic') {
     cov <- vcovA(CoQR_object, ...)
@@ -286,14 +270,12 @@ cov.CoQR <- function(CoQR_object, method, ...) {
 
 
 
-#' Title
+#' print method for the sum.CoQR object
 #'
-#' @param sum.CoQR_object
+#' @param sum.CoQR_object A sum.CoQR object
 #'
-#' @return
+#' @return Nothing
 #' @export
-#'
-#' @examples
 print.summary.CoQR <- function(sum.CoQR_object){
   # Print the VaR and CoVaR coefficients in separate calls:
   cat("\nVaR Coefficients:\n")
@@ -305,15 +287,12 @@ print.summary.CoQR <- function(sum.CoQR_object){
 
 
 
-#' Title
+#' print method for the CoQR class
 #'
-#' @param obj
-#' @param digits
+#' @param obj CoQR object
+#' @param digits printed digits after the comma
 #'
-#' @return
 #' @export
-#'
-#' @examples
 print.CoQR <- function(obj, digits=4){
   theta_info <- theta_fun(model=obj$model, theta=obj$theta, df=obj$data %>% dplyr::select(-c("VaR", "CoVaR")))
   q1 <- theta_info$length_theta1
@@ -334,39 +313,36 @@ ggplot2::autoplot
 
 
 
-#' Title
+#' Autoplot a CoQR object
 #'
-#' @param obj
-#' @param facet_names
+#' @param obj CoQR object
+#' @param facet_names Titles of the facets
 #'
-#' @return
+#' @return A ggplot object
 #' @export
-#'
-#' @examples
 #'
 #' @import ggplot2
 #' @importFrom magrittr `%>%`
 autoplot.CoQR <- function(obj, facet_names=c("X / VaR","Y / CoVaR")){
-  # Add options etc! this is a little lame so far...
-  # Shall we include the estimates into the df?
-  # ToDo: Improve facet and legend labels
-
   df_tmp <- obj$data %>%
     dplyr::mutate(VaR_violation=(x > VaR))
 
+  # ToDo: Use dplyr functions instead of reshape2!
   df_long <- dplyr::left_join(
     df_tmp %>%
-      dplyr::select(Date, Date_index, VaR_violation, x, y) %>%
-      reshape2::melt(id.vars=c("Date","Date_index","VaR_violation"), variable.name="Symbol", value.name="NegativeReturns"),
+      dplyr::select(Date, VaR_violation, x, y) %>%
+      reshape2::melt(id.vars=c("Date","VaR_violation"), variable.name="Symbol", value.name="NegativeReturns"),
     df_tmp %>%
-      dplyr::select(Date, Date_index, VaR_violation, VaR, obj$SRM) %>%
+      dplyr::select(Date, VaR_violation, VaR, obj$SRM) %>%
       dplyr::rename(x=VaR, y=obj$SRM) %>%
-      reshape2::melt(id.vars=c("Date","Date_index","VaR_violation"), variable.name="Symbol", value.name="SRMForecasts"),
-    by=c("Date", "Date_index", "VaR_violation", "Symbol")) %>%
+      reshape2::melt(id.vars=c("Date","VaR_violation"), variable.name="Symbol", value.name="SRMForecasts"),
+    by=c("Date", "VaR_violation", "Symbol")) %>%
     tibble::as_tibble()
 
+  # Rename for the facet names
   levels(df_long$Symbol) <- facet_names
 
+  # ggplot2
   p <- ggplot(df_long %>% arrange(VaR_violation)) +
     ggplot2::geom_point(aes(x=Date, y=NegativeReturns, color=VaR_violation)) +
     ggplot2::scale_colour_manual(values = c("grey", "black")) +
@@ -383,36 +359,7 @@ autoplot.CoQR <- function(obj, facet_names=c("X / VaR","Y / CoVaR")){
 
 
 
-  # OLD IMPLENENTATION Plot Function
-  # data <- obj$df %>%
-  #   # mutate(date=1:dim(obj$df)[1], m1=obj$m_est$m1, m2=obj$m_est$m2, y_XgQ=(x>m1)) %>%
-  #   mutate(date=1:dim(obj$df)[1], m1=obj$m_est$m1, m2=obj$m_est$m2)
-  #
-  # df_long <- data %>%
-  #   reshape2::melt(id.vars=c("date")) %>%
-  #   mutate(series=ifelse(variable %in% c("x","m1"), "X/VaR", paste0("Y/",obj$SRM)))
-  #
-  # data_yXgV_long <- data %>%
-  #   filter(x > m1) %>%
-  #   select(date,x,y) %>%
-  #   reshape2::melt(id.vars=c("date")) %>%
-  #   mutate(series=ifelse(variable %in% c("x","m1"), "X/VaR", paste0("Y/",obj$SRM)))
-  #
-  # p <- ggplot() +
-  #   geom_point(data=df_long %>% filter(variable %in% c("x","y")),
-  #             aes(x=date, y=value), color="grey") +
-  #   geom_point(data=data_yXgV_long,
-  #              aes(x=date, y=value), color="black") +
-  #   geom_line(data=df_long %>% filter(variable %in% c("m1","m2")),
-  #             aes(x=date, y=value, color=variable)) +
-  #   facet_wrap(~series, ncol=1) +
-  #   theme_bw()
-  #
-  # p
-
-
-
-#' Title
+#' CoQR plot method
 #'
 #' @param obj
 #' @param ...
@@ -427,7 +374,7 @@ plot.CoQR <- function(obj, ...){
 }
 
 
-#' Title
+#' CoQR fitted method
 #'
 #' @param obj
 #'
@@ -442,7 +389,7 @@ fitted.CoQR <- function(obj){
 
 
 
-#' Title
+#' CoQR residuals
 #'
 #' @param obj
 #'
@@ -460,7 +407,7 @@ predict.CoQR <- function(obj){
 
 
 
-#' Title
+#' Generic forecast method
 #'
 #' @param ...
 #'
@@ -473,15 +420,13 @@ forecast <- function(...) {
 }
 
 
-#' Title
+#' CoQR forecast method
 #'
-#' @param obj
-#' @param newdata
+#' @param obj CoQR object
+#' @param newdata new data set to use for forecasting (if not re-estimated in this time step)
 #'
-#' @return
+#' @return Vector of forecasts
 #' @export
-#'
-#' @examples
 forecast.CoQR <- function(obj, newdata=NULL){
   if (is.null(newdata)) {
     df <- obj$data %>% dplyr::select(x,y)

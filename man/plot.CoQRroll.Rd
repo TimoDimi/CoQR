@@ -2,7 +2,7 @@
 % Please edit documentation in R/CoQRroll.R
 \name{plot.CoQRroll}
 \alias{plot.CoQRroll}
-\title{Title}
+\title{CoQRroll plot method}
 \usage{
 \method{plot}{CoQRroll}(obj, ...)
 }
@@ -13,5 +13,5 @@
 
 }
 \description{
-Title
+CoQRroll plot method
 }

@@ -6,9 +6,6 @@
 \usage{
 CoQRroll(
   data = NULL,
-  x = NULL,
-  y = NULL,
-  z = NULL,
   model = "CoCAViaR_SAV_diag",
   length_IS = 1000,
   refit_freq = 100,
@@ -21,12 +18,6 @@ CoQRroll(
 }
 \arguments{
 \item{data}{data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index}
-
-\item{x}{Response vector for the VaR}
-
-\item{y}{Response vector for the CoVaR}
-
-\item{z}{Explanatory variables for the model equations}
 
 \item{model}{Specify the model type; see \link{model_fun} for details}
 

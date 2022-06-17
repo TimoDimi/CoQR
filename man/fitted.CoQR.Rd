@@ -2,9 +2,9 @@
 % Please edit documentation in R/CoQR.R
 \name{fitted.CoQR}
 \alias{fitted.CoQR}
-\title{Title}
+\title{CoQR fitted method}
 \usage{
-fitted.CoQR(obj)
+\method{fitted}{CoQR}(obj)
 }
 \arguments{
 \item{obj}{}
@@ -13,5 +13,5 @@ fitted.CoQR(obj)
 
 }
 \description{
-Title
+CoQR fitted method
 }

@@ -2,16 +2,20 @@
 % Please edit documentation in R/CoQR.R
 \name{cov.CoQR}
 \alias{cov.CoQR}
-\title{Title}
+\title{CoQR p arameter covariance estimation}
 \usage{
 cov.CoQR(CoQR_object, method, ...)
 }
 \arguments{
-\item{...}{}
+\item{CoQR_object}{A CoQR object}
+
+\item{method}{The method to compute the standard errors. Either "asymptotic" or "boot"}
+
+\item{...}{Further input parameters}
 }
 \value{
-
+covariance matrix
 }
 \description{
-Title
+CoQR p arameter covariance estimation
 }

@@ -64,7 +64,6 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
 
   # Partial covariance matrices:
   Gamma <-  cbind(Lambda1_inv %*% Lambda2 %*% Lambda_inv,  -Lambda1_inv)
-
   cov_theta_v <- 1/TT * (Lambda_inv %*% V %*% Lambda_inv)
   cov_theta_c <- 1/TT * (Gamma %*% C %*% t(Gamma))
 
@@ -78,7 +77,6 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
                     cbind(Lambda1_inv %*% Lambda2 %*% Lambda_inv,  -Lambda1_inv))
   cov_theta <- 1/TT * (barGamma %*% C %*% t(barGamma))
 
-  cov_theta %>% diag() %>% sqrt()
   # rownames(cov_theta_v) <- colnames(cov_theta_v) <- names(stats::coef(object))
 
   cov_theta

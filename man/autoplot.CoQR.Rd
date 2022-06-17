@@ -2,19 +2,18 @@
 % Please edit documentation in R/CoQR.R
 \name{autoplot.CoQR}
 \alias{autoplot.CoQR}
-\title{Title}
+\title{Autoplot a CoQR object}
 \usage{
 \method{autoplot}{CoQR}(obj, facet_names = c("X / VaR", "Y / CoVaR"))
 }
 \arguments{
-\item{facet_names}{}
+\item{obj}{CoQR object}
+
+\item{facet_names}{Titles of the facets}
 }
 \value{
-
+A ggplot object
 }
 \description{
-Title
-}
-\examples{
-
+Autoplot a CoQR object
 }

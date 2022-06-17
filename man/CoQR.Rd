@@ -10,9 +10,6 @@ CoQR(...)
 
 \method{CoQR}{default}(
   data = NULL,
-  x = NULL,
-  y = NULL,
-  z = NULL,
   model = "CoCAViaR_SAV_diag",
   SRM = "CoVaR",
   beta = 0.95,
@@ -21,18 +18,12 @@ CoQR(...)
   optim_replications = c(1, 3)
 )
 
-\method{CoQR}{fit}(data, x, y, z, model, SRM, beta, alpha, theta0, optim_replications)
+\method{CoQR}{fit}(data, model, SRM, beta, alpha, theta0, optim_replications)
 }
 \arguments{
 \item{...}{Further arguments (does not apply here)}
 
-\item{data}{data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index}
-
-\item{x}{Response vector for the VaR}
-
-\item{y}{Response vector for the CoVaR}
-
-\item{z}{Explanatory variables for the model equations}
+\item{data}{A tsibble that holds the variables x, y, possibly covariates and an index columns with the name Date}
 
 \item{model}{Specify the model type; see \link{model_fun} for details}
 
@@ -73,11 +64,18 @@ plot(obj)
 
 # (2) Simulate bivariate GARCH data
 library(rmgarch)
+library(dplyr)
 data(dji30retw)
 
 # Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
-obj <- CoQR(x=-100*as.numeric(dji30retw$JPM),
-           y=-100*rowMeans(dji30retw),
+
+data <- dji30retw \%>\%
+tibble::rownames_to_column("Date") \%>\%
+  mutate(Date=lubridate::as_date(Date)) \%>\%
+  select(Date, JPM, BAC) \%>\%
+  as_tsibble(index=Date) \%>\%
+  rename(x=JPM, y=BAC)
+obj <- CoQR(data=data,
            model="CoCAViaR_SAV_diag")
 
 # Covariance estimation and display the parameter estimates with standard errors

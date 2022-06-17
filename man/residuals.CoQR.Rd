@@ -2,9 +2,9 @@
 % Please edit documentation in R/CoQR.R
 \name{residuals.CoQR}
 \alias{residuals.CoQR}
-\title{Title}
+\title{CoQR residuals}
 \usage{
-residuals.CoQR(obj)
+\method{residuals}{CoQR}(obj)
 }
 \arguments{
 \item{obj}{}
@@ -13,5 +13,5 @@ residuals.CoQR(obj)
 
 }
 \description{
-Title
+CoQR residuals
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/CoQRroll.R
 \name{autoplot.CoQRroll}
 \alias{autoplot.CoQRroll}
-\title{Title}
+\title{CoQRroll autoplot method}
 \usage{
 \method{autoplot}{CoQRroll}(obj, facet_names = c("X / VaR", "Y / CoVaR"))
 }
@@ -13,5 +13,5 @@
 
 }
 \description{
-Title
+CoQRroll autoplot method
 }

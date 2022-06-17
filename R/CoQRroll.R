@@ -2,9 +2,6 @@
 #' Rolling Forecasts for Dynamic (VaR, CoVaR) Models
 #'
 #' @param data data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index
-#' @param x Response vector for the VaR
-#' @param y Response vector for the CoVaR
-#' @param z Explanatory variables for the model equations
 #' @param model Specify the model type; see \link{model_fun} for details
 #' @param length_IS Length of the in-sample estimation length
 #' @param refit_freq Frequency of model refitting
@@ -34,21 +31,24 @@
 #'
 #' @references \href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
 #' @importFrom magrittr `%>%`
-CoQRroll <- function(data=NULL, x=NULL, y=NULL, z=NULL,
+CoQRroll <- function(data=NULL,
                      model="CoCAViaR_SAV_diag",
                      length_IS=1000, refit_freq=100,
                      SRM="CoVaR", beta=0.95, alpha=0.95,
                      theta0=NULL, optim_replications=c(1,3)){
 
   # Collect input data as a tibble
-  data <- collect_data(data=data, x=x, y=y, z=z)
+  # data <- collect_data(data=data, x=x, y=y, z=z)
 
-  # data must be a data.frame with columns Date, Date_index, x, y
+  # data must be a data.frame with columns Date, x, y
   TT <- dim(data)[1]
   length_OOS <- TT - length_IS
   refit_points <- seq(length_IS+1,TT,by=refit_freq)
 
-  FC_df <- data.frame()
+  FC_df <- data %>%
+    dplyr::slice((length_IS+1):TT) %>%
+    dplyr::mutate(m1_FC=NA, m2_FC=NA)
+
   CoQR_objects <- list()
 
   # Loop over all OOS days
@@ -70,16 +70,14 @@ CoQRroll <- function(data=NULL, x=NULL, y=NULL, z=NULL,
     FCs <- forecast(CoQR_obj,
                     newdata=data_tt %>% dplyr::select(x,y))
 
-    FC_df <- dplyr::bind_rows(FC_df,
-                       data.frame(Date_index=tt, m1_FC=FCs[1], m2_FC=FCs[2],row.names = NULL))
+    FC_df[tt-length_IS,] <- FC_df %>%
+      dplyr::slice(tt-length_IS) %>%
+      dplyr::mutate(m1_FC=FCs[1], m2_FC=FCs[2])
   }
 
-  rownames(FC_df) <- NULL
   FC_df <- FC_df %>%
     dplyr::rename(VaR=m1_FC, !!SRM:=m2_FC) %>%
-    dplyr::left_join(data, by="Date_index") %>%
-    tibble::as_tibble() %>%
-    dplyr::select(Date, Date_index, x, y, VaR, !!SRM)
+    dplyr::select(Date, x, y, VaR, !!SRM)
 
 
   # Return an object of class "CoQRroll"
@@ -97,7 +95,7 @@ CoQRroll <- function(data=NULL, x=NULL, y=NULL, z=NULL,
 }
 
 
-#' Title
+#' CoQRroll print method
 #'
 #' @param obj
 #'
@@ -113,7 +111,7 @@ print.CoQRroll <- function(obj){
 
 
 
-#' Title
+#' CoQRroll plot method
 #'
 #' @param obj
 #' @param ...
@@ -131,7 +129,7 @@ plot.CoQRroll <- function(obj, ...){
 
 
 
-#' Title
+#' CoQRroll autoplot method
 #'
 #' @param obj
 #' @param facet_names
@@ -152,13 +150,13 @@ autoplot.CoQRroll <- function(obj, facet_names=c("X / VaR","Y / CoVaR")){
 
   df_long <- dplyr::left_join(
     df_tmp %>%
-      dplyr::select(Date, Date_index, VaR_violation, x, y) %>%
-      reshape2::melt(id.vars=c("Date","Date_index","VaR_violation"), variable.name="Symbol", value.name="NegativeReturns"),
+      dplyr::select(Date, VaR_violation, x, y) %>%
+      reshape2::melt(id.vars=c("Date","VaR_violation"), variable.name="Symbol", value.name="NegativeReturns"),
     df_tmp %>%
-      dplyr::select(Date, Date_index, VaR_violation, VaR, obj$SRM) %>%
+      dplyr::select(Date, VaR_violation, VaR, obj$SRM) %>%
       dplyr::rename(x=VaR, y=obj$SRM) %>%
-      reshape2::melt(id.vars=c("Date","Date_index","VaR_violation"), variable.name="Symbol", value.name="SRMForecasts"),
-    by=c("Date", "Date_index", "VaR_violation", "Symbol")) %>%
+      reshape2::melt(id.vars=c("Date","VaR_violation"), variable.name="Symbol", value.name="SRMForecasts"),
+    by=c("Date", "VaR_violation", "Symbol")) %>%
     tibble::as_tibble()
 
   levels(df_long$Symbol) <- facet_names

@@ -2,7 +2,7 @@
 % Please edit documentation in R/CoQR.R
 \name{forecast}
 \alias{forecast}
-\title{Title}
+\title{Generic forecast method}
 \usage{
 forecast(...)
 }
@@ -13,5 +13,5 @@ forecast(...)
 
 }
 \description{
-Title
+Generic forecast method
 }

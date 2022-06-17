@@ -2,7 +2,7 @@
 % Please edit documentation in R/CoQRroll.R
 \name{print.CoQRroll}
 \alias{print.CoQRroll}
-\title{Title}
+\title{CoQRroll print method}
 \usage{
 \method{print}{CoQRroll}(obj)
 }
@@ -13,5 +13,5 @@
 
 }
 \description{
-Title
+CoQRroll print method
 }

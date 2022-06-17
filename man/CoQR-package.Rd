@@ -8,6 +8,13 @@
 \description{
 The package estimates joint dynamic autoregressive or cross-sectional models of the VaR (Value-at-Risk) (i.e., the quantile) and the CoVaR of a bivariate vector of financial returns.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/TimoDimi/CoQR}
+}
+
+}
 \author{
 \strong{Maintainer}: Timo Dimitriadis \email{timo.dimi@gmail.com} (\href{https://orcid.org/0000-0002-8322-360X}{ORCID})
 
