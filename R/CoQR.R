@@ -21,17 +21,25 @@
 #' @seealso
 #'
 #' @examples
-#' # (1) Simulate bivariate data (x,y) with covariate z
+# (1) Simulate bivariate data (x,y) with covariate z
 #' eps <- mvtnorm::rmvt(n=1000, sigma=matrix(c(1,0.5,0.5,1),2), df = 8)
 #' z <- rnorm(1000)
 #' xy <- c(1,1) + cbind(2*z, 2.5*z) + eps
 #'
-#' # Estimate the 'joint_linear' CoQR regression model
-#'  obj <- CoQR(x=xy[,1], y=xy[,2], z=z,
-#'              model = "joint_linear",
-#'              beta=0.9, alpha=0.95)
+#' # Collect data as tsibble
+#' data <- tsibble(Date=1:length(z),
+#'                 x=xy[,1],
+#'                 y=xy[,2],
+#'                 Intercept=1,
+#'                 z=z,
+#'                 index=Date)
 #'
-#' Estimate the standard errors of the parameters
+#' # Estimate the 'joint_linear' CoQR regression model
+#' obj <- CoQR(data=data,
+#'             model = "joint_linear",
+#'             beta=0.95, alpha=0.95)
+#'
+#' # Estimate the standard errors of the parameters
 #' summary(obj)
 #'
 #' # Plot the times series
@@ -188,6 +196,7 @@ CoQR.fit <- function(data,
   # create a variable with colnames
   if (model == "joint_linear"){
     colnames_help <- data %>%
+      as_tibble() %>%
       dplyr::select(-c(Date, x, y, VaR, CoVaR)) %>%
       colnames()
     colnames <- list(VaR=colnames_help, CoVaR=colnames_help)

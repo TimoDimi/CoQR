@@ -83,6 +83,7 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
 }
 
 
+
 sparsity_kernel <- function(x, y, v, c, beta, alpha, TT, bandwidth){
   if (bandwidth=="MachadoSilva"){
     # Koenker (2005), Machado and Silva (2013) bandwidth selection
