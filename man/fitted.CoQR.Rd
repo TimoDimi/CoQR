@@ -4,7 +4,7 @@
 \alias{fitted.CoQR}
 \title{Title}
 \usage{
-\method{fitted}{CoQR}(obj)
+fitted.CoQR(obj)
 }
 \arguments{
 \item{obj}{}

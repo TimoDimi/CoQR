@@ -4,7 +4,7 @@
 \alias{residuals.CoQR}
 \title{Title}
 \usage{
-\method{residuals}{CoQR}(obj)
+residuals.CoQR(obj)
 }
 \arguments{
 \item{obj}{}
