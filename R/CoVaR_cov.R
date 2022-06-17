@@ -2,7 +2,7 @@
 vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) {
 
   TT <- dim(CoQR_object$data)[1]
-  theta_info <- theta_fun(model=CoQR_object$model, theta=CoQR_object$theta, df=CoQR_object$data %>% select(-c("VaR", "CoVaR")))
+  theta_info <- theta_fun(model=CoQR_object$model, theta=CoQR_object$theta, df=CoQR_object$data %>% dplyr::select(-c("VaR", "CoVaR")))
   q1 <- theta_info$length_theta1
   q2 <- theta_info$length_theta2
   y <- CoQR_object$data$y
@@ -10,11 +10,11 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
   alpha <- CoQR_object$prob_level$alpha
   beta <- CoQR_object$prob_level$beta
 
-  m <- model_fun(theta=CoQR_object$theta, df=CoQR_object$data %>% select(-c("VaR", "CoVaR")), prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
+  m <- model_fun(theta=CoQR_object$theta, df=CoQR_object$data %>% dplyr::select(-c("VaR", "CoVaR")), prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
   v <- m$m1
   c <- m$m2
 
-  nabla_m <- nabla_fun(theta=CoQR_object$theta, df=CoQR_object$data %>% select(-c("VaR", "CoVaR")), prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
+  nabla_m <- nabla_fun(theta=CoQR_object$theta, df=CoQR_object$data %>% dplyr::select(-c("VaR", "CoVaR")), prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
   nabla_v <- nabla_m$nabla_m1[,1:q1]
   nabla_c <- nabla_m$nabla_m2[,(q1+1):(q1+q2)]
 
@@ -81,6 +81,7 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
 
   cov_theta
 }
+
 
 
 sparsity_kernel <- function(x, y, v, c, beta, alpha, TT, bandwidth){
