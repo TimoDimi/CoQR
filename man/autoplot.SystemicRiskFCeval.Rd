@@ -2,16 +2,16 @@
 % Please edit documentation in R/SystemicRiskFCeval.R
 \name{autoplot.SystemicRiskFCeval}
 \alias{autoplot.SystemicRiskFCeval}
-\title{Title}
+\title{Autoplot method for SystemicRiskFCeval}
 \usage{
 \method{autoplot}{SystemicRiskFCeval}(obj)
 }
 \arguments{
-\item{obj}{}
+\item{obj}{SystemicRiskFCeval object}
 }
 \value{
 
 }
 \description{
-Title
+Autoplot method for SystemicRiskFCeval
 }

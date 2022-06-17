@@ -2,16 +2,18 @@
 % Please edit documentation in R/SystemicRiskFCeval.R
 \name{print.SystemicRiskFCeval}
 \alias{print.SystemicRiskFCeval}
-\title{Title}
+\title{Print method for SystemicRiskFCeval}
 \usage{
 \method{print}{SystemicRiskFCeval}(obj, digits = 4)
 }
 \arguments{
-\item{digits}{}
+\item{obj}{SystemicRiskFCeval object}
+
+\item{digits}{Printed digits after the comma}
 }
 \value{
 
 }
 \description{
-Title
+Print method for SystemicRiskFCeval
 }

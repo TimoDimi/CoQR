@@ -2,10 +2,13 @@
 % Please edit documentation in R/CoQRroll.R
 \name{CoQRroll}
 \alias{CoQRroll}
-\title{Title}
+\title{Rolling Forecasts for Dynamic (VaR, CoVaR) Models}
 \usage{
 CoQRroll(
-  data,
+  data = NULL,
+  x = NULL,
+  y = NULL,
+  z = NULL,
   model = "CoCAViaR_SAV_diag",
   length_IS = 1000,
   refit_freq = 100,
@@ -17,11 +20,51 @@ CoQRroll(
 )
 }
 \arguments{
-\item{optim_replications}{}
+\item{data}{data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index}
+
+\item{x}{Response vector for the VaR}
+
+\item{y}{Response vector for the CoVaR}
+
+\item{z}{Explanatory variables for the model equations}
+
+\item{model}{Specify the model type; see \link{model_fun} for details}
+
+\item{length_IS}{Length of the in-sample estimation length}
+
+\item{refit_freq}{Frequency of model refitting}
+
+\item{SRM}{The systemic risk measure under consideration; currently only the "CoVaR" is implemented}
+
+\item{beta}{Probability level for the VaR}
+
+\item{alpha}{Probability level for the CoVaR}
+
+\item{theta0}{Starting values for the model parameters. If NULL, then standard values are used}
+
+\item{optim_replications}{A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3)}
 }
 \value{
 
 }
 \description{
-Title
+Rolling Forecasts for Dynamic (VaR, CoVaR) Models
+}
+\examples{
+Simulate bivariate GARCH data
+library(rmgarch)
+data(dji30retw)
+
+# Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
+obj_roll <- CoQRroll(x=-100*as.numeric(dji30retw$JPM),
+                    y=-100*rowMeans(dji30retw),
+                    model="CoCAViaR_SAV_diag",
+                    length_IS=700, refit_freq=100)
+
+# Plot the forecasts
+plot (obj_roll)
+
+}
+\references{
+\href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
 }

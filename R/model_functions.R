@@ -3,12 +3,45 @@
 ###    General model, nabla and split_theta functions
 ################################################################################
 
+# ToDo:
 # A model should have three components, i.e., it is a list of length 3 or a (pre-implemented) string
 # - m(theta)
 # - nabla_m(theta)
 # - theta_split which splits the parameter vector into theta1 and theta2 of length q1 and q2
 # Simply call theta_split(theta)$theta1 and theta_split(theta)$theta2 to get the subvectors
 
+
+#' CoQR Model Function
+#'
+#' Computes the joint VaR/CoVaR model depending on either a cross-sectional, CoCAViaR or user-written model type. See also \link{CoQR}
+#'
+#' @details
+#' 'model_fun' computes the model, 'nabla_fun' its gradient, and 'theta_fun' some generic information about the respective model parameters.
+#' Currently implemented are the following models:
+#' \itemize{
+#'   \item "joint_linear": Linear models with covariates z for both, the VaR and CoVaR
+#'   \item "CoCAViaR_SAV_diag": Symmetric Absolute Value (SAV) CoCAViaR model with diagonal matrices A and B
+#'   \item "CoCAViaR_SAV_fullA": Symmetric Absolute Value (SAV) CoCAViaR model with full matrix A and and diagonal B
+#'   \item "CoCAViaR_SAV_full": Symmetric Absolute Value (SAV) CoCAViaR model with full matrix A and and upper triangular matrix B
+#'   \item "CoCAViaR_AS_pos": Asymmetric Slope (AS) CoCAViaR model where only the positive losses (negative returns) act as forcing variables
+#'   \item "CoCAViaR_AS_signs": Asymmetric Slope (AS) CoCAViaR model where only the positive and negative losses act as different forcing variables
+#'   \item "CoCAViaR_AS_mixed": Asymmetric Slope (AS) CoCAViaR model with 'mixed' forcing variables
+#' }
+#'
+#' Own model functions can be written as follows:
+#' ToDo: Specify details!
+#'
+#' @param theta Parameter vector theta
+#' @param df data.frame/tibble containing the collected data
+#' @param prob_level list of probability levels beta and alpha
+#' @param model string or list indicating the model, see Details for more
+#' @param SRM The system risk measure; currently only implemented for the "CoVaR"
+#' @param forecast logical variable whether the forecast should be produced in the call or not
+#' @param model_type either "joint", "first" or "second" indicating which model (both, VaR, or CoVaR) should be returned
+#' @param m1 Fitted values for the first (VaR) model; required for model_type="second"
+#'
+#' @return a list with entries m1 and m2 containing the VaR and CoVaR values as entries
+#' @export
 model_fun <- function(theta, df, prob_level, model="joint_linear", SRM="CoVaR", forecast=FALSE, model_type="joint", m1=NULL){
   if (!is.list(model)) {
     m <- do.call(paste0("model_", model), args=list(theta=theta, df=df, prob_level=prob_level, SRM=SRM, forecast=forecast, model_type=model_type, m1=m1))
@@ -67,6 +100,16 @@ model_joint_linear <- function(theta, df, prob_level, SRM, forecast=FALSE, model
 
 
 
+#' Gradient of the joint linear VaR/CoVaR model
+#'
+#' @param theta Parameter vector
+#' @param df Data
+#' @param prob_level List of the probability levels alpha and beta
+#' @param SRM Systemic risk measure, currently only "CoVaR"
+#'
+#' @return list of model gradients
+#'
+#' @NoRd
 nabla_joint_linear <- function(theta, df, prob_level, SRM){
   z <- df %>% dplyr::select(-c("Date_index", "Date", "x", "y")) %>% as.matrix()
 
@@ -75,6 +118,7 @@ nabla_joint_linear <- function(theta, df, prob_level, SRM){
 
   list(nabla_m1=nabla_m1, nabla_m2=nabla_m2)
 }
+
 
 
 theta_joint_linear <- function(theta, df){

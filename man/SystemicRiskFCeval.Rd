@@ -2,7 +2,7 @@
 % Please edit documentation in R/SystemicRiskFCeval.R
 \name{SystemicRiskFCeval}
 \alias{SystemicRiskFCeval}
-\title{Title}
+\title{Forecast Evaluation for the Systemic Risk Measures CoVaR and MES}
 \usage{
 SystemicRiskFCeval(
   x = NULL,
@@ -23,11 +23,39 @@ SystemicRiskFCeval(
 )
 }
 \arguments{
-\item{sig_level}{}
+\item{x}{Observation (corresponding to the VaR series)}
+
+\item{y}{Observation (corresponding to the CoVaR series)}
+
+\item{VaR1}{Baseline VaR Forecasts}
+
+\item{VaR2}{Competitor VaR Forecasts}
+
+\item{CoVaR1}{Baseline CoVaR Forecasts}
+
+\item{CoVaR2}{Competitor CoVaR Forecasts}
+
+\item{MES1}{Baseline MES Forecasts}
+
+\item{data}{Alternatively, a data frame containing all previously mentioned variables}
+
+\item{SRM}{The Systemic Risk Measure to be evaluated; either CoVaR or MES}
+
+\item{beta}{Probability level of the VaR}
+
+\item{alpha}{Probability level of the CoVaR}
+
+\item{sided}{"onehalf" or "two"; see Fissler and Hoga (2021, arXiv) for details}
+
+\item{cov_method}{covariance estimation method; "HAC" or "iid"}
+
+\item{sig_level}{Significance level for the illustrative plots}
+
+\item{MES2Competitor}{MES Forecasts}
 }
 \value{
 
 }
 \description{
-Title
+Forecast Evaluation for the Systemic Risk Measures CoVaR and MES
 }

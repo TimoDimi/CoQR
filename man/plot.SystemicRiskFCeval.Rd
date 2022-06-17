@@ -2,16 +2,18 @@
 % Please edit documentation in R/SystemicRiskFCeval.R
 \name{plot.SystemicRiskFCeval}
 \alias{plot.SystemicRiskFCeval}
-\title{Title}
+\title{Plot method for SystemicRiskFCeval}
 \usage{
 \method{plot}{SystemicRiskFCeval}(obj, ...)
 }
 \arguments{
 \item{...}{}
+
+\item{SystemicRiskFCeval}{object}
 }
 \value{
 
 }
 \description{
-Title
+Plot method for SystemicRiskFCeval
 }
