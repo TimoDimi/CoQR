@@ -2,16 +2,92 @@
 % Please edit documentation in R/CoQR.R
 \name{CoQR}
 \alias{CoQR}
-\title{Title}
+\alias{CoQR.default}
+\alias{CoQR.fit}
+\title{Joint Dynamic Models for the VaR and CoVaR}
 \usage{
 CoQR(...)
+
+\method{CoQR}{default}(
+  data = NULL,
+  x = NULL,
+  y = NULL,
+  z = NULL,
+  model = "CoCAViaR_SAV_diag",
+  SRM = "CoVaR",
+  beta = 0.95,
+  alpha = 0.95,
+  theta0 = NULL,
+  optim_replications = c(1, 3)
+)
+
+\method{CoQR}{fit}(data, x, y, z, model, SRM, beta, alpha, theta0, optim_replications)
 }
 \arguments{
-\item{...}{}
+\item{...}{Further arguments (does not apply here)}
+
+\item{data}{data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index}
+
+\item{x}{Response vector for the VaR}
+
+\item{y}{Response vector for the CoVaR}
+
+\item{z}{Explanatory variables for the model equations}
+
+\item{model}{Specify the model type; see \link{model_fun} for details}
+
+\item{SRM}{The systemic risk measure under consideration; currently only the "CoVaR" is implemented}
+
+\item{beta}{Probability level for the VaR}
+
+\item{alpha}{Probability level for the CoVaR}
+
+\item{theta0}{Starting values for the model parameters. If NULL, then standard values are used}
+
+\item{optim_replications}{A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3)}
 }
 \value{
-
+A 'CoQR' object
 }
 \description{
-Title
+
+}
+\examples{
+# (1) Simulate bivariate data (x,y) with covariate z
+eps <- mvtnorm::rmvt(n=1000, sigma=matrix(c(1,0.5,0.5,1),2), df = 8)
+z <- rnorm(1000)
+xy <- c(1,1) + cbind(2*z, 2.5*z) + eps
+
+# Estimate the 'joint_linear' CoQR regression model
+ obj <- CoQR(x=xy[,1], y=xy[,2], z=z,
+             model = "joint_linear",
+             beta=0.9, alpha=0.95)
+
+Estimate the standard errors of the parameters
+summary(obj)
+
+# Plot the times series
+plot(obj)
+
+
+
+# (2) Simulate bivariate GARCH data
+library(rmgarch)
+data(dji30retw)
+
+# Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
+obj <- CoQR(x=-100*as.numeric(dji30retw$JPM),
+           y=-100*rowMeans(dji30retw),
+           model="CoCAViaR_SAV_diag")
+
+# Covariance estimation and display the parameter estimates with standard errors
+summary(obj)
+
+
+}
+\references{
+\href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
+}
+\seealso{
+
 }

@@ -15,7 +15,6 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
   c <- m$m2
 
   nabla_m <- nabla_fun(theta=CoQR_object$theta, df=CoQR_object$data %>% select(-c("VaR", "CoVaR")), prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
-  # Get rid of the zeros in the nablas as it is currently implemented!
   nabla_v <- nabla_m$nabla_m1[,1:q1]
   nabla_c <- nabla_m$nabla_m2[,(q1+1):(q1+q2)]
 
@@ -31,12 +30,13 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
     Xi_cv_vec[tt,,] <- t(Xi_vc_vec[tt,,])
   }
 
-  # Check if that is correct in Yannick's new version
+  # V, C and D Matrix
   V <- beta*(1-beta) * apply(Xi_vv_vec, c(2,3), mean, na.rm=TRUE)
   D <- alpha*(1-alpha)*(1-beta) * apply(Xi_cc_vec, c(2,3), mean, na.rm=TRUE)
   C <- rbind(cbind(V, matrix(0, nrow=q1, ncol=q2)),
              cbind(matrix(0, nrow=q2, ncol=q1), D))
 
+  # Estimate the conditional distributions/densities
   if (sparsity=="kernel"){
     cond_dist <- sparsity_kernel(x=x, y=y, v=v, c=c, beta=beta, alpha=alpha, TT=TT, bandwidth=bandwidth)
   } else if (sparsity=="ARB"){
@@ -50,7 +50,7 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
   fY_est <- cond_dist$fY_est
   F_delta2_est <- cond_dist$F_delta2_est
 
-  # Check if it works with the dimensions!!!
+  # Lambda matrices
   Lambda_vec <- Xi_vv_vec * array(fX_est, dim=c(TT,q1,q1))
   Lambda1_vec <- Xi_cc_vec * array(fY_est - F_delta2_est, dim=c(TT,q2,q2))
   Lambda2_vec <- Xi_cv_vec * array(alpha*fX_est - F_delta1_est, dim=c(TT,q2,q1))
@@ -73,15 +73,12 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
                          cbind(matrix(0, nrow=q2, ncol=q1), cov_theta_c))
 
 
-
   # Asymptotic covariance from Remark 4
   barGamma <- rbind(cbind(-Lambda_inv,  matrix(0, nrow=q1, ncol=q2)),
                     cbind(Lambda1_inv %*% Lambda2 %*% Lambda_inv,  -Lambda1_inv))
   cov_theta <- 1/TT * (barGamma %*% C %*% t(barGamma))
 
   cov_theta %>% diag() %>% sqrt()
-
-  # From Sebastians code
   # rownames(cov_theta_v) <- colnames(cov_theta_v) <- names(stats::coef(object))
 
   cov_theta
@@ -99,8 +96,6 @@ sparsity_kernel <- function(x, y, v, c, beta, alpha, TT, bandwidth){
     eps <- 0.0001
     b_T <- stats::mad(x-v) * TT^(-1/3) * (qnorm( min(1-eps, 1-beta + m_T(1-beta))) - qnorm( max(eps, 1-beta - m_T(1-beta))))
     c_T <- stats::mad(y-c) * ((1-beta)*TT)^(-1/3) * (qnorm( min(1-eps, (1-beta)*(1-alpha) + m_T(1-alpha))) - qnorm( max(eps,(1-beta)*(1-alpha)-m_T(1-alpha))))
-    # OLD c_T implementation!
-    # c_T <- mad(y-c) * (TT)^(-1/3) * (qnorm( min(1-eps, (1-beta)*(1-alpha)+m_T((1-alpha)*(1-beta)))) - qnorm( max(eps,(1-beta)*(1-alpha)-m_T((1-alpha)*(1-beta)))))
   } else if (bandwidth=="own"){
     b_T <- 0.1/sqrt(beta*(1-beta)) * stats::mad(x-v) * TT^(-1/3)
     # Larger bandwidth as c is (at least for beta >= 0.5) further in the tail of y than v of x
@@ -114,16 +109,6 @@ sparsity_kernel <- function(x, y, v, c, beta, alpha, TT, bandwidth){
 
   fY_est <- 1/(2*c_T) * (abs(y-c) <= c_T)
   F_delta2_est <- 1/(2*c_T) * (abs(y-c) <= c_T) * (x<=v)
-
-  ## Debug stuff:
-  # mean(fX_est > 0)
-  # mean(fY_est > 0)
-  # xmv <- x-v
-  # hist(xmv[abs(xmv)<b_T])
-  # ymc <- y-c
-  # hist(ymc[abs(ymc)<c_T])
-
-  # ind_1 <- which(abs(xmv)<b_T & xmv < 0)
 
   return(list(fX_est=fX_est, F_delta1_est=F_delta1_est, fY_est=fY_est, F_delta2_est=F_delta2_est))
 }
@@ -222,87 +207,87 @@ vcovB <- function(CoQR_object, block_length='default', B=500) {
 }
 
 
-vcovBfast <- function(CoQR_object, block_length='default', B=100) {
-  if (B < 500)
-    warning("The number of bootstrap iterations is small!")
-
-  # Draw the bootstrap indices
-  TT <- dim(CoQR_object$data)[1]
-  if (block_length=='default') {block_length <- floor(TT^(1/3))}
-
-  # # Split the starting value (the original parameter estimate)
-  theta0_list <- theta_fun(model=CoQR_object$model, theta=CoQR_object$theta, df=CoQR_object$data)
-  # theta01 <- theta0_list$theta1
-  # theta02 <- theta0_list$theta2
-
-  TT <- dim(CoQR_object$data)[1]
-  theta_info <- theta_fun(model=CoQR_object$model, theta=CoQR_object$theta)
-  q1 <- theta_info$length_theta1
-  q2 <- theta_info$length_theta2
-  y <- CoQR_object$data$y
-  x <- CoQR_object$data$x
-  alpha = CoQR_object$prob_level$alpha
-  beta = CoQR_object$prob_level$beta
-
-  m <- model_fun(theta=CoQR_object$theta, df=CoQR_object$data, prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
-  v <- m$m1
-  c <- m$m2
-
-  nabla_m <- nabla_fun(theta=CoQR_object$theta, df=CoQR_object$data, prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
-  nabla_v <- nabla_m$nabla_m1[,1:q1]
-  nabla_c <- nabla_m$nabla_m2[,(q1+1):(q1+q2)]
-
-  # Xi: Outer product of the gradients
-  Xi_vv_vec <- array(NA, dim=c(TT, q1, q1))
-  Xi_vc_vec <- array(NA, dim=c(TT, q1, q2))
-  Xi_cc_vec <- array(NA, dim=c(TT, q2, q2))
-  for (tt in 1:TT){
-    Xi_vv_vec[tt,,] <- outer(nabla_v[tt,], nabla_v[tt,]) # t(nabla_v[tt,]) %*% nabla_v[tt,]
-    Xi_vc_vec[tt,,] <- outer(nabla_v[tt,], nabla_c[tt,]) # t(nabla_v[tt,]) %*% nabla_c[tt,]
-    Xi_cc_vec[tt,,] <- outer(nabla_c[tt,], nabla_c[tt,]) # t(nabla_c[tt,]) %*% nabla_c[tt,]
-  }
-
-  ### Estimate the nuisance quantities for the Lambdas through indicator functions
-  b_T <- TT^(-1/3)
-  fX_est <- 1/(2*b_T) * (abs(x-v) < b_T)
-  F_delta1_est <- 1/(2*b_T) * (abs(x-v) < b_T) * (y<=c)
-
-  # Larger bandwidth as c is further in the tail of y than v of x
-  c_T <- 5*TT^(-1/3)
-  fY_est <- 1/(2*c_T) * (abs(y-c) < c_T)
-  F_delta2_est <- 1/(2*c_T) * (abs(y-c) < c_T) * (x<=v)
-
-  Lambda_vec <- Xi_vv_vec * array(fX_est, dim=c(TT,q1,q1))
-  Lambda1_vec <- Xi_cc_vec * array(fY_est - F_delta2_est, dim=c(TT,q2,q2))
-  Lambda2_vec <- Xi_vc_vec * array(alpha*fX_est - F_delta1_est, dim=c(TT,q1,q2))
-
-  Lambda <- apply(Lambda_vec, c(2,3), mean, na.rm=TRUE)
-  Lambda1 <- apply(Lambda1_vec, c(2,3), mean, na.rm=TRUE)
-  Lambda2 <- apply(Lambda2_vec, c(2,3), mean, na.rm=TRUE)
-  Lambda_inv <- tryCatch(solve(Lambda), error=function(e){MASS::ginv(Lambda)})
-  Lambda1_inv <- tryCatch(solve(Lambda1), error=function(e){MASS::ginv(Lambda1)})
-
-
-  # Compute the moment conditions which we resample from below
-  A <- abind::abind(nabla_m$nabla_m1, nabla_m$nabla_m2, along=3)
-  momcond <- momcond_CoVaR(CoQR_object$theta, CoQR_object$data, A, CoQR_object$model, CoQR_object$prob_level)
-  momcond_trans <- cbind(momcond[,1:q1],
-                         t(t(momcond[,(q1+1):(q1+q2)]) - Lambda2 %*% Lambda_inv %*% t(momcond[,1:q1])))
-
-
-  theta_B <- matrix(NA, nrow=B, ncol=theta0_list$length_theta)
-  for (b in 1:B) {
-    B_idx <- MBB_indices(TT, block_length)
-    theta_B[b,] <- CoQR_object$theta -
-      rbind(cbind(Lambda_inv, matrix(0, nrow=q1, ncol=q2)),
-            cbind(matrix(0, nrow=q2, ncol=q1), Lambda1_inv)) %*%
-      colMeans(momcond_trans[B_idx,], na.rm=TRUE)
-  }
-
-  cov_B <- cov(theta_B)
-  # rownames(cov_B) <- colnames(cov_B) <- names(stats::coef(object))
-  cov_B
-}
+# vcovBfast <- function(CoQR_object, block_length='default', B=100) {
+#   if (B < 500)
+#     warning("The number of bootstrap iterations is small!")
+#
+#   # Draw the bootstrap indices
+#   TT <- dim(CoQR_object$data)[1]
+#   if (block_length=='default') {block_length <- floor(TT^(1/3))}
+#
+#   # # Split the starting value (the original parameter estimate)
+#   theta0_list <- theta_fun(model=CoQR_object$model, theta=CoQR_object$theta, df=CoQR_object$data)
+#   # theta01 <- theta0_list$theta1
+#   # theta02 <- theta0_list$theta2
+#
+#   TT <- dim(CoQR_object$data)[1]
+#   theta_info <- theta_fun(model=CoQR_object$model, theta=CoQR_object$theta)
+#   q1 <- theta_info$length_theta1
+#   q2 <- theta_info$length_theta2
+#   y <- CoQR_object$data$y
+#   x <- CoQR_object$data$x
+#   alpha = CoQR_object$prob_level$alpha
+#   beta = CoQR_object$prob_level$beta
+#
+#   m <- model_fun(theta=CoQR_object$theta, df=CoQR_object$data, prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
+#   v <- m$m1
+#   c <- m$m2
+#
+#   nabla_m <- nabla_fun(theta=CoQR_object$theta, df=CoQR_object$data, prob_level=CoQR_object$prob_level, model=CoQR_object$model, SRM="CoVaR")
+#   nabla_v <- nabla_m$nabla_m1[,1:q1]
+#   nabla_c <- nabla_m$nabla_m2[,(q1+1):(q1+q2)]
+#
+#   # Xi: Outer product of the gradients
+#   Xi_vv_vec <- array(NA, dim=c(TT, q1, q1))
+#   Xi_vc_vec <- array(NA, dim=c(TT, q1, q2))
+#   Xi_cc_vec <- array(NA, dim=c(TT, q2, q2))
+#   for (tt in 1:TT){
+#     Xi_vv_vec[tt,,] <- outer(nabla_v[tt,], nabla_v[tt,]) # t(nabla_v[tt,]) %*% nabla_v[tt,]
+#     Xi_vc_vec[tt,,] <- outer(nabla_v[tt,], nabla_c[tt,]) # t(nabla_v[tt,]) %*% nabla_c[tt,]
+#     Xi_cc_vec[tt,,] <- outer(nabla_c[tt,], nabla_c[tt,]) # t(nabla_c[tt,]) %*% nabla_c[tt,]
+#   }
+#
+#   ### Estimate the nuisance quantities for the Lambdas through indicator functions
+#   b_T <- TT^(-1/3)
+#   fX_est <- 1/(2*b_T) * (abs(x-v) < b_T)
+#   F_delta1_est <- 1/(2*b_T) * (abs(x-v) < b_T) * (y<=c)
+#
+#   # Larger bandwidth as c is further in the tail of y than v of x
+#   c_T <- 5*TT^(-1/3)
+#   fY_est <- 1/(2*c_T) * (abs(y-c) < c_T)
+#   F_delta2_est <- 1/(2*c_T) * (abs(y-c) < c_T) * (x<=v)
+#
+#   Lambda_vec <- Xi_vv_vec * array(fX_est, dim=c(TT,q1,q1))
+#   Lambda1_vec <- Xi_cc_vec * array(fY_est - F_delta2_est, dim=c(TT,q2,q2))
+#   Lambda2_vec <- Xi_vc_vec * array(alpha*fX_est - F_delta1_est, dim=c(TT,q1,q2))
+#
+#   Lambda <- apply(Lambda_vec, c(2,3), mean, na.rm=TRUE)
+#   Lambda1 <- apply(Lambda1_vec, c(2,3), mean, na.rm=TRUE)
+#   Lambda2 <- apply(Lambda2_vec, c(2,3), mean, na.rm=TRUE)
+#   Lambda_inv <- tryCatch(solve(Lambda), error=function(e){MASS::ginv(Lambda)})
+#   Lambda1_inv <- tryCatch(solve(Lambda1), error=function(e){MASS::ginv(Lambda1)})
+#
+#
+#   # Compute the moment conditions which we resample from below
+#   A <- abind::abind(nabla_m$nabla_m1, nabla_m$nabla_m2, along=3)
+#   momcond <- momcond_CoVaR(CoQR_object$theta, CoQR_object$data, A, CoQR_object$model, CoQR_object$prob_level)
+#   momcond_trans <- cbind(momcond[,1:q1],
+#                          t(t(momcond[,(q1+1):(q1+q2)]) - Lambda2 %*% Lambda_inv %*% t(momcond[,1:q1])))
+#
+#
+#   theta_B <- matrix(NA, nrow=B, ncol=theta0_list$length_theta)
+#   for (b in 1:B) {
+#     B_idx <- MBB_indices(TT, block_length)
+#     theta_B[b,] <- CoQR_object$theta -
+#       rbind(cbind(Lambda_inv, matrix(0, nrow=q1, ncol=q2)),
+#             cbind(matrix(0, nrow=q2, ncol=q1), Lambda1_inv)) %*%
+#       colMeans(momcond_trans[B_idx,], na.rm=TRUE)
+#   }
+#
+#   cov_B <- cov(theta_B)
+#   # rownames(cov_B) <- colnames(cov_B) <- names(stats::coef(object))
+#   cov_B
+# }
 
 
 

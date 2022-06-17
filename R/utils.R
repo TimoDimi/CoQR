@@ -83,10 +83,10 @@ collect_data <- function(data, x, y, z=NULL){
   }
 
   # Treat empty Date_index and Date columns
-  if(!("Date_index" %in% colnames(data))) {data <- data %>% tibble::add_column(Date_index=1:nrow(data))}
-  if(!("Date" %in% colnames(data))) {data <- data %>% dplyr::mutate(Date=lubridate::as_date(Date_index))}
+  # if(!("Date_index" %in% colnames(data))) {data <- data %>% tibble::add_column(Date_index=1:nrow(data))}
+  if(!("Date" %in% colnames(data))) {data <- data %>% dplyr::mutate(Date=lubridate::as_date(1:nrow(data)))}
 
-  data %>% dplyr::select(Date_index, Date, x, y, everything())
+  data %>% dplyr::select(Date, x, y, everything())
 }
 
 

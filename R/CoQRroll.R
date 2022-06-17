@@ -1,24 +1,47 @@
 
-#' Title
+#' Rolling Forecasts for Dynamic (VaR, CoVaR) Models
 #'
-#' @param data
-#' @param model
-#' @param length_IS
-#' @param refit_freq
-#' @param SRM
-#' @param beta
-#' @param alpha
-#' @param theta0
-#' @param optim_replications
+#' @param data data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index
+#' @param x Response vector for the VaR
+#' @param y Response vector for the CoVaR
+#' @param z Explanatory variables for the model equations
+#' @param model Specify the model type; see \link{model_fun} for details
+#' @param length_IS Length of the in-sample estimation length
+#' @param refit_freq Frequency of model refitting
+#' @param SRM The systemic risk measure under consideration; currently only the "CoVaR" is implemented
+#' @param beta Probability level for the VaR
+#' @param alpha Probability level for the CoVaR
+#' @param theta0 Starting values for the model parameters. If NULL, then standard values are used
+#' @param optim_replications A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3)
 #'
 #' @return
 #' @export
+
 #'
 #' @examples
-CoQRroll <- function(data, model="CoCAViaR_SAV_diag",
+#' Simulate bivariate GARCH data
+#' library(rmgarch)
+#' data(dji30retw)
+#'
+#' # Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
+#' obj_roll <- CoQRroll(x=-100*as.numeric(dji30retw$JPM),
+#'                     y=-100*rowMeans(dji30retw),
+#'                     model="CoCAViaR_SAV_diag",
+#'                     length_IS=700, refit_freq=100)
+#'
+#' # Plot the forecasts
+#' plot (obj_roll)
+#'
+#' @references \href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
+#' @importFrom magrittr `%>%`
+CoQRroll <- function(data=NULL, x=NULL, y=NULL, z=NULL,
+                     model="CoCAViaR_SAV_diag",
                      length_IS=1000, refit_freq=100,
                      SRM="CoVaR", beta=0.95, alpha=0.95,
                      theta0=NULL, optim_replications=c(1,3)){
+
+  # Collect input data as a tibble
+  data <- collect_data(data=data, x=x, y=y, z=z)
 
   # data must be a data.frame with columns Date, Date_index, x, y
   TT <- dim(data)[1]
@@ -62,7 +85,7 @@ CoQRroll <- function(data, model="CoCAViaR_SAV_diag",
   # Return an object of class "CoQRroll"
   obj <- list(
     FC_df=FC_df,
-    data=df,
+    data=data,
     SRM=SRM,
     alpha=alpha,
     beta=beta,

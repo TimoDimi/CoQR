@@ -1,22 +1,22 @@
 
 
-#' Title
+#' Forecast Evaluation for the Systemic Risk Measures CoVaR and MES
 #'
-#' @param x
-#' @param y
-#' @param VaR1
-#' @param VaR2
-#' @param CoVaR1
-#' @param CoVaR2
-#' @param MES1
-#' @param MES2
-#' @param data
-#' @param SRM
-#' @param beta
-#' @param alpha
-#' @param sided
-#' @param cov_method
-#' @param sig_level
+#' @param x Observation (corresponding to the VaR series)
+#' @param y Observation (corresponding to the CoVaR series)
+#' @param VaR1 Baseline VaR Forecasts
+#' @param VaR2 Competitor VaR Forecasts
+#' @param CoVaR1 Baseline CoVaR Forecasts
+#' @param CoVaR2 Competitor CoVaR Forecasts
+#' @param MES1 Baseline MES Forecasts
+#' @param MES2Competitor MES Forecasts
+#' @param data Alternatively, a data frame containing all previously mentioned variables
+#' @param SRM The Systemic Risk Measure to be evaluated; either CoVaR or MES
+#' @param beta Probability level of the VaR
+#' @param alpha Probability level of the CoVaR
+#' @param sided "onehalf" or "two"; see Fissler and Hoga (2021, arXiv) for details
+#' @param cov_method covariance estimation method; "HAC" or "iid"
+#' @param sig_level Significance level for the illustrative plots
 #'
 #' @return
 #' @export
@@ -105,7 +105,7 @@ SystemicRiskFCeval <- function(x=NULL, y=NULL,
   else if (MeanLossDiff[2] >= 0) {zone <- "green"}
   else {zone <- "orange"}
 
-
+  # Return the object
   obj <- list(MeanLossDiff=MeanLossDiff,
               LossDiffs=LossDiff,
               TestStat=TestStat,
@@ -127,9 +127,9 @@ SystemicRiskFCeval <- function(x=NULL, y=NULL,
 
 
 
-#' Title
+#'  Plot method for SystemicRiskFCeval
 #'
-#' @param obj
+#' @param SystemicRiskFCeval object
 #' @param ...
 #'
 #' @return
@@ -144,9 +144,9 @@ plot.SystemicRiskFCeval <- function(obj, ...){
 
 
 
-#' Title
+#' Autoplot method for SystemicRiskFCeval
 #'
-#' @param obj
+#' @param obj SystemicRiskFCeval object
 #'
 #' @return
 #' @export
@@ -183,10 +183,10 @@ autoplot.SystemicRiskFCeval <- function(obj){
 
 
 
-#' Title
+#' Print method for SystemicRiskFCeval
 #'
-#' @param obj
-#' @param digits
+#' @param obj SystemicRiskFCeval object
+#' @param digits Printed digits after the comma
 #'
 #' @return
 #' @export
@@ -201,11 +201,19 @@ print.SystemicRiskFCeval <- function(obj, digits=4){
 
 
 
-# Inputs:
-# x     = verifying observations
-# VaR   = VaR forecasts
-# beta  = risk level
-# b     = degree of homogeneity (b>=0)
+
+
+#' VaR part of the joint (VaR, CoVaR) loss function
+#'
+#' @param x Observation
+#' @param VaR VaR Forecast
+#' @param beta Quantile level beta
+#' @param b degree of homogeneity (b>=0)
+#'
+#' @return
+#' @export
+#'
+#' @examples
 loss_VaR <- function(x, VaR, beta, b=1){
   if(b==0){   # requires positive VaR forecasts (here h(x)=log(x))
     S <- ( 1*(x <= VaR) - beta ) * log( pmax.int(VaR, 1e-10) ) +  1*(x > VaR) * log( pmax.int(x, 1e-10) )
@@ -218,12 +226,20 @@ loss_VaR <- function(x, VaR, beta, b=1){
 
 
 
-# Inputs:
-# (x,y) = verifying observations
-# VaR   = VaR forecasts
-# CoVaR = CoVaR forecasts
-# alpha = risk level
-# b     = degree of homogeneity (b>=0)
+
+#' CoVaR part of the joint (VaR, CoVaR) loss function
+#'
+#' @param x Observation (corresponding to the VaR series)
+#' @param y Observation (corresponding to the CoVaR series)
+#' @param VaR VaR forecasts
+#' @param CoVaR CoVaR forecasts
+#' @param alpha CoVaR quantile level alpha
+#' @param b degree of homogeneity (b>=0)
+#'
+#' @return
+#' @export
+#'
+#' @examples
 loss_CoVaR <- function(x, y, VaR, CoVaR, alpha, b=1){
   if(b==0){  # requires positive CoVaR forecasts (here g(x)=log(x))
     S <- 1*(x>VaR) * ( ( 1*(y <= CoVaR) - alpha ) * log( pmax.int(CoVaR, 1e-10) ) +  1*(y > CoVaR) * log( pmax.int(y, 1e-10) ) )
@@ -236,10 +252,17 @@ loss_CoVaR <- function(x, y, VaR, CoVaR, alpha, b=1){
 
 
 
-# Inputs:
-# (x,y) = verifying observations
-# VaR   = VaR forecasts
-# MES   = MES forecasts
+#'  MES part of the joint (VaR, MES) loss function
+#'
+#' @param x Observation (corresponding to the VaR series)
+#' @param y Observation (corresponding to the MES series)
+#' @param VaR VaR forecasts
+#' @param MES MES forecasts
+#'
+#' @return
+#' @export
+#'
+#' @examples
 loss_MES <- function(x, y, VaR, MES){
   S <- 1*(x>VaR) * (MES - y)^2
   return(S)

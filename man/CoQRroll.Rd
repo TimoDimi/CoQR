@@ -2,7 +2,7 @@
 % Please edit documentation in R/CoQRroll.R
 \name{CoQRroll}
 \alias{CoQRroll}
-\title{Title}
+\title{Rolling Forecasts for Dynamic (VaR, CoVaR) Models}
 \usage{
 CoQRroll(
   data,
@@ -23,5 +23,26 @@ CoQRroll(
 
 }
 \description{
-Title
+Rolling Forecasts for Dynamic (VaR, CoVaR) Models
+}
+\examples{
+Simulate bivariate GARCH data
+library(rmgarch)
+data(dji30retw)
+
+# Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
+obj_roll <- CoQRroll(data=data.frame(x=-100*as.numeric(dji30retw$JPM),
+y=-100*rowMeans(dji30retw)),
+model="CoCAViaR_SAV_diag",
+length_IS=1000, refit_freq=100)
+
+# Covariance estimation and display the parameter estimates with standard errors
+summary(obj_roll)
+
+# Plot the forecasts
+plot (obj_roll)
+
+}
+\references{
+\href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
 }

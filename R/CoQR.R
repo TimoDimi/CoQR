@@ -1,36 +1,71 @@
 
 
 
-#' Title
+#' Joint Dynamic Models for the VaR and CoVaR
 #'
-#' @param ...
+#' Estimates a joint dynamic semiparametric model for the pair (VaR, CoVaR):
+#' \deqn{VaR_\beta(X_t | Z_t) = v_t(\theta^v)
+#' \deqn{CoVaR_\alpha(Y_t | Z_t) = c_t(\theta^c)
 #'
-#' @return
-#' @export
+#' @param data data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index
+#' @param x Response vector for the VaR
+#' @param y Response vector for the CoVaR
+#' @param z Explanatory variables for the model equations
+#' @param model Specify the model type; see \link{model_fun} for details
+#' @param SRM The systemic risk measure under consideration; currently only the "CoVaR" is implemented
+#' @param beta Probability level for the VaR
+#' @param alpha Probability level for the CoVaR
+#' @param theta0 Starting values for the model parameters. If NULL, then standard values are used
+#' @param optim_replications A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3)
+#' @param ... Further arguments (does not apply here)
+#'
+#' @return A 'CoQR' object
+#'
+#' @seealso
 #'
 #' @examples
+#' # (1) Simulate bivariate data (x,y) with covariate z
+#' eps <- mvtnorm::rmvt(n=1000, sigma=matrix(c(1,0.5,0.5,1),2), df = 8)
+#' z <- rnorm(1000)
+#' xy <- c(1,1) + cbind(2*z, 2.5*z) + eps
+#'
+#' # Estimate the 'joint_linear' CoQR regression model
+#'  obj <- CoQR(x=xy[,1], y=xy[,2], z=z,
+#'              model = "joint_linear",
+#'              beta=0.9, alpha=0.95)
+#'
+#' Estimate the standard errors of the parameters
+#' summary(obj)
+#'
+#' # Plot the times series
+#' plot(obj)
+#'
+#'
+#'
+#' # (2) Simulate bivariate GARCH data
+#' library(rmgarch)
+#' data(dji30retw)
+#'
+#' # Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
+#' obj <- CoQR(x=-100*as.numeric(dji30retw$JPM),
+#'            y=-100*rowMeans(dji30retw),
+#'            model="CoCAViaR_SAV_diag")
+#'
+#' # Covariance estimation and display the parameter estimates with standard errors
+#' summary(obj)
+#'
+#'
+#' @references \href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
+#' @rdname CoQR
+#' @export
 CoQR <- function(...) {
   UseMethod('CoQR')
 }
 
 
-#' Title
-#'
-#' @param data
-#' @param x
-#' @param y
-#' @param z
-#' @param model
-#' @param SRM
-#' @param beta
-#' @param alpha
-#' @param theta0
-#' @param optim_replications
-#'
-#' @return
+
+#' @rdname CoQR
 #' @export
-#'
-#' @examples
 CoQR.default <- function(data=NULL, x=NULL, y=NULL, z=NULL,
                          model="CoCAViaR_SAV_diag", SRM="CoVaR", beta=0.95, alpha=0.95,
                          theta0=NULL, optim_replications=c(1,3)){
@@ -46,29 +81,14 @@ CoQR.default <- function(data=NULL, x=NULL, y=NULL, z=NULL,
 
 
 
-#' Title
-#'
-#' @param data
-#' @param x
-#' @param y
-#' @param z
-#' @param model
-#' @param SRM
-#' @param beta
-#' @param alpha
-#' @param theta0
-#' @param optim_replications
-#'
-#' @return
+#' @rdname CoQR
 #' @export
-#'
-#' @examples
-#' @importFrom magrittr `%>%`
-#' @importFrom tidyselect everything
-#' @import dplyr
 CoQR.fit <- function(data, x, y, z,
                      model, SRM, beta, alpha,
                      theta0, optim_replications){
+
+  # ToDo: Get rid of the Date_index!!!
+
 
   # Collect input data as a tibble
   data <- collect_data(data=data, x=x, y=y, z=z)
@@ -295,7 +315,7 @@ print.summary.CoQR <- function(sum.CoQR_object){
 #'
 #' @examples
 print.CoQR <- function(obj, digits=4){
-  theta_info <- theta_fun(model=obj$model, theta=obj$theta, df=obj$data %>% select(-c("VaR", "CoVaR")))
+  theta_info <- theta_fun(model=obj$model, theta=obj$theta, df=obj$data %>% dplyr::select(-c("VaR", "CoVaR")))
   q1 <- theta_info$length_theta1
   q2 <- theta_info$length_theta2
 
@@ -464,7 +484,7 @@ forecast <- function(...) {
 #' @examples
 forecast.CoQR <- function(obj, newdata=NULL){
   if (is.null(newdata)) {
-    df <- obj$data %>% select(x,y)
+    df <- obj$data %>% dplyr::select(x,y)
   } else {
     # ToDo: Check if newdata is reasonable!
     df <- newdata
