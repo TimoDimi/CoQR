@@ -5,6 +5,7 @@
 \title{Forecast Evaluation for the Systemic Risk Measures CoVaR and MES}
 \usage{
 SystemicRiskFCeval(
+  data = NULL,
   x = NULL,
   y = NULL,
   VaR1 = NULL,
@@ -13,8 +14,7 @@ SystemicRiskFCeval(
   CoVaR2 = NULL,
   MES1 = NULL,
   MES2 = NULL,
-  data = NULL,
-  SRM = NULL,
+  SRM = "CoVaR",
   beta = 0.95,
   alpha = 0.95,
   sided = "onehalf",
@@ -23,6 +23,8 @@ SystemicRiskFCeval(
 )
 }
 \arguments{
+\item{data}{A tsibble containing columns for Date, x,y, VaR1, VaR2, and either {CoVaR1, CovaR2} or {MES1, MES2}}
+
 \item{x}{Observation (corresponding to the VaR series)}
 
 \item{y}{Observation (corresponding to the CoVaR series)}
@@ -37,7 +39,7 @@ SystemicRiskFCeval(
 
 \item{MES1}{Baseline MES Forecasts}
 
-\item{data}{Alternatively, a data frame containing all previously mentioned variables}
+\item{MES2}{Competitor MES Forecasts}
 
 \item{SRM}{The Systemic Risk Measure to be evaluated; either CoVaR or MES}
 
@@ -50,8 +52,6 @@ SystemicRiskFCeval(
 \item{cov_method}{covariance estimation method; "HAC" or "iid"}
 
 \item{sig_level}{Significance level for the illustrative plots}
-
-\item{MES2Competitor}{MES Forecasts}
 }
 \value{
 

@@ -87,14 +87,10 @@ vcovA <- function(CoQR_object, sparsity="kernel", bandwidth="MachadoSilva",...) 
 sparsity_kernel <- function(x, y, v, c, beta, alpha, TT, bandwidth){
   if (bandwidth=="MachadoSilva"){
     # Koenker (2005), Machado and Silva (2013) bandwidth selection
-    # kX_T <- mad(x-v)
-    # kY_T <- mad(y-c)
-    # mX_T <-  * (qnorm(0.975))^(2/3) * ((1.5*(dnorm(qnorm(1-beta)))^2)/(2*(qnorm(1-beta))^2 + 1))^(1/3)
-    # mY_T <- TT^(-1/3) * (qnorm(0.975))^(2/3) * ((1.5*(dnorm(qnorm((1-beta)*(1-alpha))))^2)/(2*(qnorm((1-beta)*(1-alpha)))^2 + 1))^(1/3)
     m_T <- function(tau){(qnorm(0.975))^(2/3) * ((1.5*(dnorm(qnorm(tau)))^2)/(2*(qnorm(tau))^2 + 1))^(1/3)}
     eps <- 0.0001
-    b_T <- stats::mad(x-v) * TT^(-1/3) * (qnorm( min(1-eps, 1-beta + m_T(1-beta))) - qnorm( max(eps, 1-beta - m_T(1-beta))))
-    c_T <- stats::mad(y-c) * ((1-beta)*TT)^(-1/3) * (qnorm( min(1-eps, (1-beta)*(1-alpha) + m_T(1-alpha))) - qnorm( max(eps,(1-beta)*(1-alpha)-m_T(1-alpha))))
+    b_T <- stats::mad(x-v) * TT^(-1/3) * (qnorm( min(1-eps, beta + m_T(beta))) - qnorm( max(eps, beta - m_T(beta))))
+    c_T <- stats::mad(y-c) * ((1-beta)*TT)^(-1/3) * (qnorm( min(1-eps, alpha + m_T(alpha))) - qnorm( max(eps, alpha - m_T(alpha))))
   } else if (bandwidth=="own"){
     b_T <- 0.1/sqrt(beta*(1-beta)) * stats::mad(x-v) * TT^(-1/3)
     # Larger bandwidth as c is (at least for beta >= 0.5) further in the tail of y than v of x

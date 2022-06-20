@@ -2,6 +2,7 @@
 
 #' Forecast Evaluation for the Systemic Risk Measures CoVaR and MES
 #'
+#' @param data A tsibble containing columns for Date, x,y, VaR1, VaR2, and either {CoVaR1, CovaR2} or {MES1, MES2}
 #' @param x Observation (corresponding to the VaR series)
 #' @param y Observation (corresponding to the CoVaR series)
 #' @param VaR1 Baseline VaR Forecasts
@@ -9,8 +10,7 @@
 #' @param CoVaR1 Baseline CoVaR Forecasts
 #' @param CoVaR2 Competitor CoVaR Forecasts
 #' @param MES1 Baseline MES Forecasts
-#' @param MES2Competitor MES Forecasts
-#' @param data Alternatively, a data frame containing all previously mentioned variables
+#' @param MES2 Competitor MES Forecasts
 #' @param SRM The Systemic Risk Measure to be evaluated; either CoVaR or MES
 #' @param beta Probability level of the VaR
 #' @param alpha Probability level of the CoVaR
@@ -23,23 +23,30 @@
 #'
 #' @examples
 #' @importFrom magrittr `%>%`
-SystemicRiskFCeval <- function(x=NULL, y=NULL,
+SystemicRiskFCeval <- function(data=NULL,
+                               x=NULL, y=NULL,
                                VaR1=NULL, VaR2=NULL,
                                CoVaR1=NULL, CoVaR2=NULL,
                                MES1=NULL, MES2=NULL,
-                               data=NULL,
-                               SRM=NULL, beta=0.95, alpha=0.95,
+                               SRM="CoVaR", beta=0.95, alpha=0.95,
                                sided="onehalf", cov_method="HAC", sig_level=0.05){
+
+
+  # ToDo: Somehow deal elegantly with CoVaR and MES input data!
+
 
   if (is.null(data)){
     if (is.null(CoVaR1)){
       SRM <- "MES"
-      data <- tibble::tibble(x=x, y=y, VaR1=VaR1, VaR2=VaR2, SRM1=MES1, SRM2=MES2)
+      data <- tsibble::tsibble(Date=1:length(x), x=x, y=y, VaR1=VaR1, VaR2=VaR2, SRM1=MES1, SRM2=MES2, index=Date)
     } else {
       SRM <- "CoVaR"
-      data <- tibble::tibble(x=x, y=y, VaR1=VaR1, VaR2=VaR2, SRM1=CoVaR1, SRM2=CoVaR2)
+      data <- tsibble::tsibble(Date=1:length(x), x=x, y=y, VaR1=VaR1, VaR2=VaR2, SRM1=CoVaR1, SRM2=CoVaR2, index=Date)
     }
+  } else{
+    if (!is_tsibble(data)) stop("Error: Please enter a 'tsibble' object for the argument 'data'.")
   }
+
   data <- data %>% stats::na.omit()
 
   LossDiffVaR <- with(data, loss_VaR(x=x, VaR=VaR1, beta=beta)) - with(data, loss_VaR(x=x, VaR=VaR2, beta=beta))

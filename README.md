@@ -37,6 +37,7 @@ library(quantmod)
 #> Warning: Paket 'quantmod' wurde unter R Version 4.1.2 erstellt
 #> Lade nötiges Paket: xts
 #> Lade nötiges Paket: zoo
+#> Warning: Paket 'zoo' wurde unter R Version 4.1.2 erstellt
 #> 
 #> Attache Paket: 'zoo'
 #> Die folgenden Objekte sind maskiert von 'package:base':
@@ -46,7 +47,9 @@ library(quantmod)
 #> Registered S3 method overwritten by 'quantmod':
 #>   method            from
 #>   as.zoo.data.frame zoo
+library(tidyr)
 library(dplyr)
+#> Warning: Paket 'dplyr' wurde unter R Version 4.1.2 erstellt
 #> 
 #> Attache Paket: 'dplyr'
 #> Die folgenden Objekte sind maskiert von 'package:xts':
@@ -58,33 +61,43 @@ library(dplyr)
 #> Die folgenden Objekte sind maskiert von 'package:base':
 #> 
 #>     intersect, setdiff, setequal, union
+library(tsibble)
+#> 
+#> Attache Paket: 'tsibble'
+#> Das folgende Objekt ist maskiert 'package:zoo':
+#> 
+#>     index
+#> Die folgenden Objekte sind maskiert von 'package:base':
+#> 
+#>     intersect, setdiff, union
 library(CoQR)
-
 
 # Get data from Yahoo Finance
 data_Symbols <- lapply(c("JPM", "^GSPC"), function(x) {
   getSymbols(x,
              from = "2000/01/01",
-             to = "2022/05/25",
+             to = "2021/12/31",
              periodicity = "daily",
              auto.assign = FALSE) %>%
-    data.frame(Date=index(.), check.names=FALSE) %>%
-    tibble::as_tibble() %>%
+    data.frame(Date=zoo::index(.), check.names=FALSE) %>%
     rename_all(~stringr::str_replace_all(., paste0(x,"."), ""))
 })
 names(data_Symbols) <- c("JPM", "SP500")
 
-data_Assets <- bind_rows(data_Symbols, .id = "Asset") %>%
+# Collect data as a tsibble with x and y as column names
+data_Assets <- dplyr::bind_rows(data_Symbols, .id = "Asset") %>%
   dplyr::group_by(Asset) %>%
   dplyr::mutate(Date=lubridate::as_date(Date),
          NegReturn= -100*(log(Close) - log(lag(Close)))) %>%
   dplyr::select(Date, Asset, NegReturn) %>%
-  na.omit()
+  stats::na.omit() %>%
+  tidyr::pivot_wider(names_from=Asset, values_from=NegReturn) %>%
+  dplyr::rename(x=JPM, y=SP500) %>%
+  tsibble::as_tsibble(index=Date)
 
-# Fit a CoCAViaR model
-CoCAViaR_obj <- CoQR(x=data_Assets %>% filter(Asset=="JPM") %>% pull(NegReturn),
-                     y=data_Assets %>% filter(Asset=="SP500") %>% pull(NegReturn),
-                     z=NULL, 
+
+# Fit a CoCAViaR-SAV-fullA model
+CoCAViaR_obj <- CoQR(data=data_Assets,
                      model="CoCAViaR_SAV_fullA", 
                      SRM="CoVaR", 
                      beta=0.95, 
@@ -95,32 +108,22 @@ summary(CoCAViaR_obj)
 #> 
 #> VaR Coefficients:
 #>             Estimate Std. Error t value  Pr(>|t|)    
-#> (Intercept) 0.048858   0.168621  0.2897 0.7720201    
-#> lag |X|     0.157323   0.045067  3.4908 0.0004852 ***
-#> lag |Y|     0.148553   0.112470  1.3208 0.1866163    
-#> lag VaR     0.868650   0.068149 12.7464 < 2.2e-16 ***
+#> (Intercept) 0.054091   0.159953  0.3382  0.735250    
+#> lag |X|     0.168976   0.052725  3.2049  0.001359 ** 
+#> lag |Y|     0.178439   0.124983  1.4277  0.153434    
+#> lag VaR     0.853420   0.059296 14.3926 < 2.2e-16 ***
 #> 
 #> CoVaR Coefficients:
-#>             Estimate Std. Error t value  Pr(>|t|)    
-#> (Intercept)  0.25411    0.61375  0.4140   0.67888    
-#> lag |X|      0.12149    0.16581  0.7327   0.46376    
-#> lag |Y|      0.37166    0.22560  1.6474   0.09952 .  
-#> lag CoVaR    0.79619    0.19885  4.0040 6.307e-05 ***
+#>             Estimate Std. Error t value Pr(>|t|)   
+#> (Intercept)  0.26586    0.81959  0.3244  0.74567   
+#> lag |X|      0.12585    0.18708  0.6727  0.50115   
+#> lag |Y|      0.43136    0.39308  1.0974  0.27252   
+#> lag CoVaR    0.78244    0.25806  3.0320  0.00244 **
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-# Plot
+# Plot the time series and estimated (in-sample) VaR/CoVaR
 plot(CoCAViaR_obj)
 ```
 
 <img src="man/figures/README-example-1.png" width="100%" />
-
-``` r
-## basic example code
-```
-
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this. You could also
-use GitHub Actions to re-render `README.Rmd` every time you push. An
-example workflow can be found here:
-<https://github.com/r-lib/actions/tree/v1/examples>.
