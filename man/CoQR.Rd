@@ -21,21 +21,21 @@ CoQR(...)
 \method{CoQR}{fit}(data, model, SRM, beta, alpha, theta0, optim_replications)
 }
 \arguments{
-\item{...}{Further arguments (does not apply here)}
+\item{...}{Further arguments (does not apply here).}
 
-\item{data}{A tsibble that holds the variables x, y, possibly covariates and an index columns with the name Date}
+\item{data}{A tsibble that contains the variables x, y, possibly covariates and an index columns with the name Date.}
 
-\item{model}{Specify the model type; see \link{model_fun} for details}
+\item{model}{Specify the model type; see \link{model_fun} for details.}
 
-\item{SRM}{The systemic risk measure under consideration; currently only the "CoVaR" is implemented}
+\item{SRM}{The systemic risk measure under consideration; currently only the "CoVaR" is implemented.}
 
-\item{beta}{Probability level for the VaR}
+\item{beta}{Probability level for the VaR.}
 
-\item{alpha}{Probability level for the CoVaR}
+\item{alpha}{Probability level for the CoVaR.}
 
-\item{theta0}{Starting values for the model parameters. If NULL, then standard values are used}
+\item{theta0}{Starting values for the model parameters. If NULL, then standard values are used.}
 
-\item{optim_replications}{A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3)}
+\item{optim_replications}{A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3).}
 }
 \value{
 A 'CoQR' object
@@ -43,7 +43,14 @@ A 'CoQR' object
 \description{
 
 }
+\details{
+ToDo: Detailed description
+}
 \examples{
+### (1) A predictive CoQR
+library(tsibble)
+
+# (1) Simulate bivariate data (x,y) with covariate z
 eps <- mvtnorm::rmvt(n=1000, sigma=matrix(c(1,0.5,0.5,1),2), df = 8)
 z <- rnorm(1000)
 xy <- c(1,1) + cbind(2*z, 2.5*z) + eps
@@ -57,42 +64,47 @@ data <- tsibble(Date=1:length(z),
                 index=Date)
 
 # Estimate the 'joint_linear' CoQR regression model
-obj <- CoQR(data=data,
-            model = "joint_linear",
-            beta=0.95, alpha=0.95)
+obj_fit <- CoQR(data=data,
+                model = "joint_linear",
+                beta=0.95,
+                alpha=0.95)
 
 # Estimate the standard errors of the parameters
-summary(obj)
-
-# Plot the times series
-plot(obj)
+summary(obj_fit)
 
 
 
-# (2) Simulate bivariate GARCH data
+### (1) A Dynamic CoQR Forecasting Model
+
+ # Get financial data and generate the data tsibble
 library(rmgarch)
 library(dplyr)
+library(lubridate)
 data(dji30retw)
 
-# Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
-
 data <- dji30retw \%>\%
-tibble::rownames_to_column("Date") \%>\%
-  mutate(Date=lubridate::as_date(Date)) \%>\%
-  select(Date, JPM, BAC) \%>\%
-  as_tsibble(index=Date) \%>\%
-  rename(x=JPM, y=BAC)
+  dplyr::mutate(DJ30=rowMeans(.)) \%>\%
+  tibble::rownames_to_column(var = "Date") \%>\%
+  dplyr::mutate(Date=lubridate::as_date((Date))) \%>\%
+  tsibble::as_tsibble(index="Date") \%>\%
+  dplyr::select(Date, x=JPM, y=DJ30) \%>\%
+  dplyr::mutate(x=-100*x, y=-100*y)
+# Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
 obj <- CoQR(data=data,
            model="CoCAViaR_SAV_diag")
 
 # Covariance estimation and display the parameter estimates with standard errors
 summary(obj)
 
+# Plot the estimated time series
+plot(obj)
+
 
 }
 \references{
-\href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
+\href{https://arxiv.org/abs/2206.14275}{Dynamic Co-Quantile Regression}
 }
 \seealso{
-
+\code{link{CoQRroll}} for a class of rolling window CoQR models,
+\code{link{model_functions}} for the specification of model functions
 }

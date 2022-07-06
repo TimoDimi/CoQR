@@ -1,27 +1,32 @@
 
 
-
 #' Joint Dynamic Models for the VaR and CoVaR
 #'
-#' Estimates a joint dynamic semiparametric model for the pair (VaR, CoVaR):
+#' Estimates a joint dynamic semiparametric 'CoQR' model for the pair (VaR, CoVaR):
 #' \deqn{VaR_\beta(X_t | Z_t) = v_t(\theta^v)
 #' \deqn{CoVaR_\alpha(Y_t | Z_t) = c_t(\theta^c)
 #'
-#' @param data A tsibble that holds the variables x, y, possibly covariates and an index columns with the name Date
-#' @param model Specify the model type; see \link{model_fun} for details
-#' @param SRM The systemic risk measure under consideration; currently only the "CoVaR" is implemented
-#' @param beta Probability level for the VaR
-#' @param alpha Probability level for the CoVaR
-#' @param theta0 Starting values for the model parameters. If NULL, then standard values are used
-#' @param optim_replications A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3)
-#' @param ... Further arguments (does not apply here)
+#' ToDo: Detailed description
+#'
+#' @param data A tsibble that contains the variables x, y, possibly covariates and an index columns with the name Date.
+#' @param model Specify the model type; see \link{model_fun} for details.
+#' @param SRM The systemic risk measure under consideration; currently only the "CoVaR" is implemented.
+#' @param beta Probability level for the VaR.
+#' @param alpha Probability level for the CoVaR.
+#' @param theta0 Starting values for the model parameters. If NULL, then standard values are used.
+#' @param optim_replications A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3).
+#' @param ... Further arguments (does not apply here).
 #'
 #' @return A 'CoQR' object
 #'
-#' @seealso
+#' @seealso \code{link{CoQRroll}} for a class of rolling window CoQR models,
+#' \code{link{model_functions}} for the specification of model functions
 #'
 #' @examples
-# (1) Simulate bivariate data (x,y) with covariate z
+#' ### (1) A predictive CoQR
+#' library(tsibble)
+#'
+#' # (1) Simulate bivariate data (x,y) with covariate z
 #' eps <- mvtnorm::rmvt(n=1000, sigma=matrix(c(1,0.5,0.5,1),2), df = 8)
 #' z <- rnorm(1000)
 #' xy <- c(1,1) + cbind(2*z, 2.5*z) + eps
@@ -35,41 +40,44 @@
 #'                 index=Date)
 #'
 #' # Estimate the 'joint_linear' CoQR regression model
-#' obj <- CoQR(data=data,
-#'             model = "joint_linear",
-#'             beta=0.95, alpha=0.95)
+#' obj_fit <- CoQR(data=data,
+#'                 model = "joint_linear",
+#'                 beta=0.95,
+#'                 alpha=0.95)
 #'
 #' # Estimate the standard errors of the parameters
-#' summary(obj)
-#'
-#' # Plot the times series
-#' plot(obj)
+#' summary(obj_fit)
 #'
 #'
 #'
-#' # (2) Simulate bivariate GARCH data
+#' ### (1) A Dynamic CoQR Forecasting Model
+#'
+#'  # Get financial data and generate the data tsibble
 #' library(rmgarch)
 #' library(dplyr)
+#' library(lubridate)
 #' data(dji30retw)
 #'
-#' # Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
-#'
 #' data <- dji30retw %>%
-#' tibble::rownames_to_column("Date") %>%
-#'   mutate(Date=lubridate::as_date(Date)) %>%
-#'   select(Date, JPM, BAC) %>%
-#'   as_tsibble(index=Date) %>%
-#'   rename(x=JPM, y=BAC)
+#'   dplyr::mutate(DJ30=rowMeans(.)) %>%
+#'   tibble::rownames_to_column(var = "Date") %>%
+#'   dplyr::mutate(Date=lubridate::as_date((Date))) %>%
+#'   tsibble::as_tsibble(index="Date") %>%
+#'   dplyr::select(Date, x=JPM, y=DJ30) %>%
+#'   dplyr::mutate(x=-100*x, y=-100*y)
 
-
+#' # Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
 #' obj <- CoQR(data=data,
 #'            model="CoCAViaR_SAV_diag")
 #'
 #' # Covariance estimation and display the parameter estimates with standard errors
 #' summary(obj)
 #'
+#' # Plot the estimated time series
+#' plot(obj)
 #'
-#' @references \href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
+#'
+#' @references \href{https://arxiv.org/abs/2206.14275}{Dynamic Co-Quantile Regression}
 #' @rdname CoQR
 #' @export
 CoQR <- function(...) {
@@ -346,14 +354,15 @@ autoplot.CoQR <- function(obj, facet_names=c("X / VaR","Y / CoVaR")){
       dplyr::rename(x=VaR, y=obj$SRM) %>%
       reshape2::melt(id.vars=c("Date","VaR_violation"), variable.name="Symbol", value.name="SRMForecasts"),
     by=c("Date", "VaR_violation", "Symbol")) %>%
-    tibble::as_tibble()
+    tibble::as_tibble() %>%
+    dplyr::rename("VaR Exceedance" = "VaR_violation")
 
   # Rename for the facet names
   levels(df_long$Symbol) <- facet_names
 
   # ggplot2
-  p <- ggplot(df_long %>% arrange(VaR_violation)) +
-    ggplot2::geom_point(aes(x=Date, y=NegativeReturns, color=VaR_violation)) +
+  p <- ggplot(df_long %>% arrange(`VaR Exceedance`)) +
+    ggplot2::geom_point(aes(x=Date, y=NegativeReturns, color=`VaR Exceedance`)) +
     ggplot2::scale_colour_manual(values = c("grey", "black")) +
     ggnewscale::new_scale_color() + # For two color scales!!!
     ggplot2::geom_line(aes(x=Date, y=SRMForecasts, color=Symbol)) +

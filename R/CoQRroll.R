@@ -1,35 +1,43 @@
 
 #' Rolling Forecasts for Dynamic (VaR, CoVaR) Models
 #'
-#' @param data data.frame that holds the variables x,y, possibly covariates and the index columns with names Date and Date_index
-#' @param model Specify the model type; see \link{model_fun} for details
-#' @param length_IS Length of the in-sample estimation length
-#' @param refit_freq Frequency of model refitting
-#' @param SRM The systemic risk measure under consideration; currently only the "CoVaR" is implemented
-#' @param beta Probability level for the VaR
-#' @param alpha Probability level for the CoVaR
-#' @param theta0 Starting values for the model parameters. If NULL, then standard values are used
-#' @param optim_replications A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3)
+#' @param data a tsibble object that contains the variables x,y, possibly covariates and the index columns with names Date and Date_index.
+#' @param model Specify the model type; see \link{model_fun} for details.
+#' @param length_IS Length of the in-sample estimation length.
+#' @param refit_freq Frequency of model refitting.
+#' @param SRM The systemic risk measure under consideration; currently only the "CoVaR" is implemented.
+#' @param beta Probability level for the VaR.
+#' @param alpha Probability level for the CoVaR.
+#' @param theta0 Starting values for the model parameters. If NULL, then standard values are used.
+#' @param optim_replications A vector with two integer entries indicating how often the M-estimator of the (VaR, CoVaR) model will be restarted. The default is c(1,3).
 #'
-#' @return
+#' @return A 'CoQRroll' object
+#'
 #' @export
 
 #'
 #' @examples
-#' Simulate bivariate GARCH data
+#' # Get financial data and generate the data tsibble
 #' library(rmgarch)
 #' data(dji30retw)
 #'
+#' data <- dji30retw %>%
+#'   dplyr::mutate(DJ30=rowMeans(.)) %>%
+#'   tibble::rownames_to_column(var = "Date") %>%
+#'   dplyr::mutate(Date=lubridate::as_date((Date))) %>%
+#'   tsibble::as_tsibble(index="Date") %>%
+#'   dplyr::select(Date, x=JPM, y=DJ30) %>%
+#'   dplyr::mutate(x=-100*x, y=-100*y)
+#'
 #' # Estimate the "CoCAViaR_SAV_diag" model on the negative percentage log-returns
-#' obj_roll <- CoQRroll(x=-100*as.numeric(dji30retw$JPM),
-#'                     y=-100*rowMeans(dji30retw),
-#'                     model="CoCAViaR_SAV_diag",
-#'                     length_IS=700, refit_freq=100)
+#' obj_roll <- CoQRroll(data=data,
+#'                      model="CoCAViaR_SAV_diag",
+#'                      length_IS=700, refit_freq=100)
 #'
 #' # Plot the forecasts
-#' plot (obj_roll)
+#' plot(obj_roll)
 #'
-#' @references \href{https://arxiv.org/abs/.....}{A Dynamic Co-Quantile Regression}
+#' @references \href{https://arxiv.org/abs/2206.14275}{Dynamic Co-Quantile Regression}
 #' @importFrom magrittr `%>%`
 CoQRroll <- function(data=NULL,
                      model="CoCAViaR_SAV_diag",
@@ -37,10 +45,7 @@ CoQRroll <- function(data=NULL,
                      SRM="CoVaR", beta=0.95, alpha=0.95,
                      theta0=NULL, optim_replications=c(1,3)){
 
-  # Collect input data as a tibble
-  # data <- collect_data(data=data, x=x, y=y, z=z)
-
-  # data must be a data.frame with columns Date, x, y
+  # data must be a tsibble object with columns Date, x, y and possibly covariates
   TT <- dim(data)[1]
   length_OOS <- TT - length_IS
   refit_points <- seq(length_IS+1,TT,by=refit_freq)
@@ -61,7 +66,7 @@ CoQRroll <- function(data=NULL,
       # Iterative starting values from the previous fit
       if (tt==refit_points[1]) theta_start <- theta0 else theta_start <- CoQR_obj$theta
 
-      # ToDo: Error handling if fit fails?
+      # Possible extension: Include some error handling if this fit fails?
       CoQR_obj <- CoQR(data=data_tt, model=model,
                        SRM=SRM, beta=beta, alpha=alpha,
                        theta0=theta_start, optim_replications=optim_replications)

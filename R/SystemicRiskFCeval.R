@@ -2,7 +2,7 @@
 
 #' Forecast Evaluation for the Systemic Risk Measures CoVaR and MES
 #'
-#' @param data A tsibble containing columns for Date, x,y, VaR1, VaR2, and either {CoVaR1, CovaR2} or {MES1, MES2}
+#' @param data A tsibble containing columns for Date, x,y, VaR1, VaR2, SRM1 and SRM2, where the latter two are either CoVaR or MES forecasts, as specified in the argument 'SRM'.
 #' @param x Observation (corresponding to the VaR series)
 #' @param y Observation (corresponding to the CoVaR series)
 #' @param VaR1 Baseline VaR Forecasts
@@ -33,8 +33,6 @@ SystemicRiskFCeval <- function(data=NULL,
 
 
   # ToDo: Somehow deal elegantly with CoVaR and MES input data!
-
-
   if (is.null(data)){
     if (is.null(CoVaR1)){
       SRM <- "MES"
@@ -84,7 +82,7 @@ SystemicRiskFCeval <- function(data=NULL,
 
 
   # Contour data for the ellipse plot
-  # ToDo: This only applies to the ONEHALF-sided test!!!!!
+  # This only applies to the ONEHALF-sided test
   # Calculate and plot something different for the TWO-sided test
   new_sig <- function(x, sig_level){
     ret <- sig_level - 0.5 * (1 + x - pchisq(qchisq(1-x, df=2) , df=1))
@@ -181,7 +179,9 @@ autoplot.SystemicRiskFCeval <- function(obj){
     ggplot2::theme_bw() +
     # theme(panel.ontop = TRUE, panel.background = element_rect(color = NA, fill = NA)) +
     ggplot2::scale_x_continuous(limits = c(-x_lim,x_lim)) +
-    ggplot2::scale_y_continuous(limits = c(-y_lim,y_lim))
+    ggplot2::scale_y_continuous(limits = c(-y_lim,y_lim)) +
+    ggplot2::xlab("Average VaR Loss Difference") +
+    ggplot2::ylab("Average CoVaR Loss Difference")
 
   p
 }

@@ -23,7 +23,7 @@ SystemicRiskFCeval(
 )
 }
 \arguments{
-\item{data}{A tsibble containing columns for Date, x,y, VaR1, VaR2, and either {CoVaR1, CovaR2} or {MES1, MES2}}
+\item{data}{A tsibble containing columns for Date, x,y, VaR1, VaR2, SRM1 and SRM2, where the latter two are either CoVaR or MES forecasts, as specified in the argument 'SRM'.}
 
 \item{x}{Observation (corresponding to the VaR series)}
 
