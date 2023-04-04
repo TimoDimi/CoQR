@@ -15,9 +15,6 @@ loss_MES(x, y, VaR, MES)
 
 \item{MES}{MES forecasts}
 }
-\value{
-
-}
 \description{
 MES part of the joint (VaR, MES) loss function
 }

@@ -11,9 +11,6 @@
 
 \item{digits}{Printed digits after the comma}
 }
-\value{
-
-}
 \description{
 Print method for SystemicRiskFCeval
 }

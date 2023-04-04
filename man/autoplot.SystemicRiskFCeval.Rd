@@ -9,9 +9,6 @@
 \arguments{
 \item{obj}{SystemicRiskFCeval object}
 }
-\value{
-
-}
 \description{
 Autoplot method for SystemicRiskFCeval
 }

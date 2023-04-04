@@ -2,7 +2,7 @@
 
 #' Forecast Evaluation for the Systemic Risk Measures CoVaR and MES
 #'
-#' @param data A tsibble containing columns for Date, x,y, VaR1, VaR2, SRM1 and SRM2, where the latter two are either CoVaR or MES forecasts, as specified in the argument 'SRM'.
+#' @param data A tsibble containing columns for Date, x,y, VaR1, VaR2, risk_measure1 and risk_measure2, where the latter two are either CoVaR or MES forecasts, as specified in the argument 'risk_measure'.
 #' @param x Observation (corresponding to the VaR series)
 #' @param y Observation (corresponding to the CoVaR series)
 #' @param VaR1 Baseline VaR Forecasts
@@ -11,7 +11,7 @@
 #' @param CoVaR2 Competitor CoVaR Forecasts
 #' @param MES1 Baseline MES Forecasts
 #' @param MES2 Competitor MES Forecasts
-#' @param SRM The Systemic Risk Measure to be evaluated; either CoVaR or MES
+#' @param risk_measure The Systemic Risk Measure to be evaluated; either CoVaR or MES
 #' @param beta Probability level of the VaR
 #' @param alpha Probability level of the CoVaR
 #' @param sided "onehalf" or "two"; see Fissler and Hoga (2021, arXiv) for details
@@ -28,18 +28,18 @@ SystemicRiskFCeval <- function(data=NULL,
                                VaR1=NULL, VaR2=NULL,
                                CoVaR1=NULL, CoVaR2=NULL,
                                MES1=NULL, MES2=NULL,
-                               SRM="CoVaR", beta=0.95, alpha=0.95,
+                               risk_measure="CoVaR", beta=0.95, alpha=0.95,
                                sided="onehalf", cov_method="HAC", sig_level=0.05){
 
 
   # ToDo: Somehow deal elegantly with CoVaR and MES input data!
   if (is.null(data)){
     if (is.null(CoVaR1)){
-      SRM <- "MES"
-      data <- tsibble::tsibble(Date=1:length(x), x=x, y=y, VaR1=VaR1, VaR2=VaR2, SRM1=MES1, SRM2=MES2, index=Date)
+      risk_measure <- "MES"
+      data <- tsibble::tsibble(Date=1:length(x), x=x, y=y, VaR1=VaR1, VaR2=VaR2, risk_measure1=MES1, risk_measure2=MES2, index=Date)
     } else {
-      SRM <- "CoVaR"
-      data <- tsibble::tsibble(Date=1:length(x), x=x, y=y, VaR1=VaR1, VaR2=VaR2, SRM1=CoVaR1, SRM2=CoVaR2, index=Date)
+      risk_measure <- "CoVaR"
+      data <- tsibble::tsibble(Date=1:length(x), x=x, y=y, VaR1=VaR1, VaR2=VaR2, risk_measure1=CoVaR1, risk_measure2=CoVaR2, index=Date)
     }
   } else{
     if (!is_tsibble(data)) stop("Error: Please enter a 'tsibble' object for the argument 'data'.")
@@ -48,11 +48,11 @@ SystemicRiskFCeval <- function(data=NULL,
   data <- data %>% stats::na.omit()
 
   LossDiffVaR <- with(data, loss_VaR(x=x, VaR=VaR1, beta=beta)) - with(data, loss_VaR(x=x, VaR=VaR2, beta=beta))
-  LossDiffSRM <- switch(SRM,
-                        MES = {with(data, loss_MES(x=x, y=y, VaR=VaR1, MES=SRM1)) - with(data, loss_MES(x=x, y=y, VaR=VaR2, MES=SRM2))},
-                        CoVaR = {with(data, loss_CoVaR(x=x, y=y, VaR=VaR1, CoVaR=SRM1, alpha=alpha)) - with(data, loss_CoVaR(x=x, y=y, VaR=VaR2, CoVaR=SRM2, alpha=alpha))}
+  LossDiffrisk_measure <- switch(risk_measure,
+                        MES = {with(data, loss_MES(x=x, y=y, VaR=VaR1, MES=risk_measure1)) - with(data, loss_MES(x=x, y=y, VaR=VaR2, MES=risk_measure2))},
+                        CoVaR = {with(data, loss_CoVaR(x=x, y=y, VaR=VaR1, CoVaR=risk_measure1, alpha=alpha)) - with(data, loss_CoVaR(x=x, y=y, VaR=VaR2, CoVaR=risk_measure2, alpha=alpha))}
   )
-  LossDiff <- cbind(LossDiffVaR, LossDiffSRM)
+  LossDiff <- cbind(LossDiffVaR, LossDiffrisk_measure)
   MeanLossDiff <- colMeans(LossDiff, na.rm = T)
 
   # Wald type tests
@@ -121,7 +121,7 @@ SystemicRiskFCeval <- function(data=NULL,
               sig_level=sig_level,
               Omega=Omega,
               sided=sided,
-              SRM=SRM,
+              risk_measure=risk_measure,
               beta=beta,
               alpha=alpha
               )

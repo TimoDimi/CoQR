@@ -4,7 +4,7 @@
 \alias{nabla_joint_linear}
 \title{Gradient of the joint linear VaR/CoVaR model}
 \usage{
-nabla_joint_linear(theta, df, prob_level, SRM)
+nabla_joint_linear(theta, df, prob_level, risk_measure)
 }
 \arguments{
 \item{theta}{Parameter vector}
@@ -13,7 +13,7 @@ nabla_joint_linear(theta, df, prob_level, SRM)
 
 \item{prob_level}{List of the probability levels alpha and beta}
 
-\item{SRM}{Systemic risk measure, currently only "CoVaR"}
+\item{risk_measure}{Systemic risk measure, currently only "CoVaR"}
 }
 \value{
 list of model gradients

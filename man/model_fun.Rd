@@ -2,14 +2,14 @@
 % Please edit documentation in R/model_functions.R
 \name{model_fun}
 \alias{model_fun}
-\title{CoQR Model Function}
+\title{SRM Model Function}
 \usage{
 model_fun(
   theta,
   df,
   prob_level,
   model = "joint_linear",
-  SRM = "CoVaR",
+  risk_measure = "CoVaR",
   forecast = FALSE,
   model_type = "joint",
   m1 = NULL
@@ -24,7 +24,7 @@ model_fun(
 
 \item{model}{string or list indicating the model, see Details for more}
 
-\item{SRM}{The system risk measure; currently only implemented for the "CoVaR"}
+\item{risk_measure}{The system risk measure; currently only implemented for the "CoVaR"}
 
 \item{forecast}{logical variable whether the forecast should be produced in the call or not}
 
@@ -36,7 +36,7 @@ model_fun(
 a list with entries m1 and m2 containing the VaR and CoVaR values as entries
 }
 \description{
-Computes the joint VaR/CoVaR model depending on either a cross-sectional, CoCAViaR or user-written model type. See also \link{CoQR}
+Computes the joint VaR/CoVaR model depending on either a cross-sectional, CoCAViaR or user-written model type. See also \link{SRM}
 }
 \details{
 'model_fun' computes the model, 'nabla_fun' its gradient, and 'theta_fun' some generic information about the respective model parameters.

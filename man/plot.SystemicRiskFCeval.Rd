@@ -11,9 +11,6 @@
 
 \item{SystemicRiskFCeval}{object}
 }
-\value{
-
-}
 \description{
 Plot method for SystemicRiskFCeval
 }

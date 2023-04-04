@@ -15,9 +15,6 @@ loss_VaR(x, VaR, beta, b = 1)
 
 \item{b}{degree of homogeneity (b>=0)}
 }
-\value{
-
-}
 \description{
 VaR part of the joint (VaR, CoVaR) loss function
 }

@@ -19,9 +19,6 @@ loss_CoVaR(x, y, VaR, CoVaR, alpha, b = 1)
 
 \item{b}{degree of homogeneity (b>=0)}
 }
-\value{
-
-}
 \description{
 CoVaR part of the joint (VaR, CoVaR) loss function
 }
